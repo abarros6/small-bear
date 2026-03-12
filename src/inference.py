@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""
+Dr. Beary Good — inference script.
+
+Role is always specified explicitly via --role. No automatic role detection.
+No system prompt is applied by default — the adapter weights carry the
+age-appropriate communication register. Pass --system-prompt to inject
+application context (e.g. for VR deployment testing).
+
+Modes:
+  default         Load base model + LoRA adapter from adapters/{model_size}/{role}/
+  --base          Load the raw base model (no adapter) — for comparison
+  --model-size    Select 3b (default) or 1b base model for ablation
+
+Usage:
+    # Fine-tuned adapter, no system prompt (weights carry the style):
+    python src/inference.py --role age_5_11 --query "Will the X-ray hurt?"
+    python src/inference.py --role age_12_18 --query "Will the X-ray hurt?"
+
+    # 1B model ablation:
+    python src/inference.py --role age_5_11 --model-size 1b --query "Will the X-ray hurt?"
+
+    # Base model for comparison (no adapter, no system prompt):
+    python src/inference.py --base --query "Will the X-ray hurt?"
+
+    # With system prompt (VR deployment testing):
+    python src/inference.py --role age_5_11 --query "Will the X-ray hurt?" \\
+        --system-prompt "You are Dr. Beary Good at Victoria Hospital."
+
+    # Interactive mode:
+    python src/inference.py --role age_5_11 --interactive
+
+    # Benchmark across both roles (no system prompt):
+    python src/inference.py --benchmark
+"""
+
+import argparse
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from constants import BASE_MODEL_3B, BASE_MODEL_1B, ROLES
+
+ADAPTER_DIR = Path("adapters")
+
+
+def load_model(role: str, model_size: str = "3b", use_base: bool = False):
+    """Load model and tokenizer.
+
+    Args:
+        role: One of the values in ROLES.
+        model_size: '3b' or '1b' — selects base model for ablation study.
+        use_base: Load the raw base model with no adapter (for comparison).
+
+    Default: loads base model + LoRA adapter from adapters/{model_size}/{role}/.
+
+    Returns:
+        (model, tokenizer)
+    """
+    from mlx_lm import load
+
+    base_model = BASE_MODEL_3B if model_size == "3b" else BASE_MODEL_1B
+
+    if use_base:
+        print(f"Loading base model (no adapter): {base_model}", file=sys.stderr)
+        return load(base_model)
+
+    adapter_path = ADAPTER_DIR / model_size / role
+    if not adapter_path.exists():
+        print(f"Error: adapter not found at {adapter_path}", file=sys.stderr)
+        print(f"  Train first: mlx_lm.lora --config configs/{role}_{model_size}_lora.yaml",
+              file=sys.stderr)
+        raise SystemExit(1)
+    print(f"Loading {base_model} + adapter: {adapter_path}", file=sys.stderr)
+    return load(base_model, adapter_path=str(adapter_path))
+
+
+def generate_response(
+    model,
+    tokenizer,
+    query: str,
+    system_prompt: str | None = None,
+    max_tokens: int = 300,
+) -> tuple:
+    """Generate a response for the given query.
+
+    Args:
+        system_prompt: Optional. If None, only the user message is sent —
+                       matching the no-system-prompt training setup.
+
+    Returns:
+        (response_text: str, latency_seconds: float)
+    """
+    from mlx_lm import generate
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": query.strip()})
+
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+
+    t0 = time.perf_counter()
+    response = generate(
+        model,
+        tokenizer,
+        prompt=prompt,
+        max_tokens=max_tokens,
+        verbose=False,
+    )
+    latency = time.perf_counter() - t0
+
+    return response, latency
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Dr. Beary Good — explicit-role inference"
+    )
+
+    parser.add_argument("--base", action="store_true",
+                        help="Load raw base model (no adapter) — for comparison")
+    parser.add_argument("--role", "-r", choices=ROLES,
+                        help=f"Role adapter to load: {' | '.join(ROLES)}")
+    parser.add_argument("--model-size", choices=["3b", "1b"], default="3b",
+                        help="Base model size for ablation: 3b (default) or 1b")
+    parser.add_argument("--system-prompt", "-s",
+                        help="Optional system prompt (e.g. for VR deployment testing). "
+                             "Omit to run without one — matching training conditions.")
+    parser.add_argument("--query", "-q", help="Single query string")
+    parser.add_argument("--interactive", "-i", action="store_true",
+                        help="Interactive mode — loop until quit")
+    parser.add_argument("--benchmark", action="store_true",
+                        help="Run standard queries across all roles (no system prompt)")
+    parser.add_argument("--max-tokens", type=int, default=300,
+                        help="Maximum tokens to generate (default: 300)")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="Show latency after each response")
+
+    args = parser.parse_args()
+
+    if not args.base and not args.role and not args.benchmark:
+        parser.error(f"--role is required ({' | '.join(ROLES)})")
+
+    if args.benchmark:
+        benchmark_queries = [
+            ("Will the X-ray hurt?",                                        "age_5_11"),
+            ("I'm scared. Can my teddy bear come with me?",                 "age_5_11"),
+            ("Why do I have to stay in bed?",                               "age_5_11"),
+            ("What does that beeping machine do?",                          "age_5_11"),
+            ("Who are all these people in scrubs?",                         "age_5_11"),
+            ("Will the X-ray hurt?",                                        "age_12_18"),
+            ("What actually happens during an MRI?",                        "age_12_18"),
+            ("Why do I have to wear a hospital gown?",                      "age_12_18"),
+            ("Can I have my phone with me during the procedure?",           "age_12_18"),
+            ("What are the nurses actually doing when they check on me?",   "age_12_18"),
+        ]
+
+        models = {}
+        print("Dr. Beary Good — Benchmark (no system prompt)")
+        print("=" * 70)
+
+        latencies = []
+        for query, role in benchmark_queries:
+            key = f"{role}_{args.model_size}"
+            if key not in models:
+                models[key] = load_model(role, model_size=args.model_size, use_base=args.base)
+            model, tokenizer = models[key]
+            response, latency = generate_response(
+                model, tokenizer, query,
+                system_prompt=args.system_prompt,  # None by default
+                max_tokens=args.max_tokens,
+            )
+            latencies.append(latency)
+            print(f"\n[{role}] Q: {query}")
+            print(f"A: {response[:300]}{'...' if len(response) > 300 else ''}")
+            if args.verbose:
+                print(f"   Latency: {latency*1000:.0f}ms")
+
+        print("\n" + "=" * 70)
+        print(f"Latency avg: {sum(latencies)/len(latencies):.2f}s  "
+              f"min={min(latencies):.2f}s  max={max(latencies):.2f}s")
+        return
+
+    if args.interactive:
+        role = args.role
+        print("Dr. Beary Good — Interactive Inference")
+        print(f"Role:          {role}")
+        print(f"Model size:    {args.model_size}")
+        print(f"System prompt: {'none' if not args.system_prompt else repr(args.system_prompt[:60] + '...')}")
+        print("Type a query and press Enter. Type 'quit' to exit.\n")
+
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base)
+
+        while True:
+            try:
+                query = input("Query> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+            if not query:
+                continue
+            if query.lower() in ("quit", "exit", "q"):
+                break
+
+            response, latency = generate_response(
+                model, tokenizer, query,
+                system_prompt=args.system_prompt,
+                max_tokens=args.max_tokens,
+            )
+            print(f"\n{response}\n")
+            if args.verbose:
+                print(f"[Latency: {latency*1000:.0f}ms]\n")
+
+    elif args.query:
+        role = args.role or ROLES[0]
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base)
+        response, latency = generate_response(
+            model, tokenizer, args.query,
+            system_prompt=args.system_prompt,
+            max_tokens=args.max_tokens,
+        )
+        print(response)
+        if args.verbose:
+            print(f"\n[Latency: {latency*1000:.0f}ms]")
+
+    else:
+        parser.print_help()
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,6 @@
+mlx-lm==0.30.7
+mlx==0.30.6
+transformers==5.2.0
+datasets==4.6.0
+textstat==0.7.13
+numpy>=1.26.0

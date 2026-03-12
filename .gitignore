@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.DS_Store
+
+# Large binary/generated directories — never commit these
+adapters/
+logs/
+outputs/
+data/age_5_11/
+data/age_12_18/
+
+# Keep source data in git — remove the next line to exclude it
+# data/source/
