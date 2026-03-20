@@ -91,6 +91,39 @@ def generate_response(
 
     Returns:
         (response_text: str, latency_seconds: float)
+
+    Inference settings in use
+    -------------------------
+    temperature  : 0.0  (mlx-lm default — greedy decoding)
+        Scales the logit distribution before sampling.
+        0.0 = always pick the single highest-probability token (deterministic, no variation).
+        0.0–0.5 = low randomness, focused and consistent — appropriate for a medical/safety context.
+        0.7–1.0 = natural conversational variation; same question may get slightly different answers.
+        >1.0 = increasingly incoherent / "creative"; not suitable here.
+        For a VR pediatric guide, 0.0 maximises safety (no chance of unexpected outputs) but
+        produces identical answers to identical questions. A value of ~0.3 would add natural
+        variation while staying conservative.
+
+    top_p        : 1.0  (mlx-lm default — nucleus sampling disabled)
+        Restricts sampling to the smallest set of tokens whose cumulative probability ≥ top_p.
+        1.0 = no restriction (all tokens eligible, but temp=0.0 makes this irrelevant anyway).
+        0.9 = sample only from tokens covering the top 90% of probability mass.
+        Only meaningful when temperature > 0.
+
+    top_k        : 0    (mlx-lm default — top-k sampling disabled)
+        Restricts sampling to the K most probable tokens at each step.
+        0 = disabled. Again irrelevant at temp=0.0.
+
+    repetition_penalty : 1.0  (mlx-lm default — no penalty)
+        Divides logits of already-generated tokens by this factor to discourage repetition.
+        1.0 = no penalty. Values of 1.1–1.3 reduce looping responses. Useful if the model
+        starts repeating phrases — more likely at temp=0.0 on long outputs.
+
+    max_tokens   : 300  (set in argparse; ~200–250 words)
+        Hard cap on generated tokens. Generation stops at this limit OR at the model's EOS token,
+        whichever comes first. The EOS token usually fires before the cap for well-trained adapters.
+        Increase if responses are being cut off mid-sentence.
+        Decrease to enforce brevity or reduce latency.
     """
     from mlx_lm import generate
 
@@ -110,8 +143,9 @@ def generate_response(
         model,
         tokenizer,
         prompt=prompt,
-        max_tokens=max_tokens,
+        max_tokens=max_tokens,  # see docstring — default 300 tokens
         verbose=False,
+        # temperature, top_p, top_k, repetition_penalty are all mlx-lm defaults (see docstring)
     )
     latency = time.perf_counter() - t0
 
@@ -138,7 +172,9 @@ def main():
     parser.add_argument("--benchmark", action="store_true",
                         help="Run standard queries across all roles (no system prompt)")
     parser.add_argument("--max-tokens", type=int, default=300,
-                        help="Maximum tokens to generate (default: 300)")
+                        help="Maximum tokens to generate (default: 300). "
+                             "~300 tokens ≈ 200-250 words. Increase if responses are truncated; "
+                             "decrease to reduce latency. EOS usually fires before this cap.")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Show latency after each response")
 

@@ -150,6 +150,139 @@ present at inference.
 - A side-by-side comparison with the base model (no adapter, no system prompt) isolates
   exactly what fine-tuning contributed.
 
+## Hyperparameters & Inference Settings
+
+All four configs share identical hyperparameter values. The only differences between them are
+`model`, `data`, and `adapter_path`. This is intentional — the ablation study is valid only
+if every other variable is held constant.
+
+### LoRA Architecture
+
+**`num_layers: 16`**
+How many transformer layers (counted from the top) receive LoRA adapter matrices.
+The 3B model has 28 layers total — `num_layers: 16` adapts the upper 57%.
+The 1B model has 16 layers total — `num_layers: 16` adapts all of them.
+Upper layers handle high-level semantic and stylistic decisions, making them the
+highest-value target for register adaptation. Lower layers handle token-level
+representations and are left untouched (shared base behaviour is preserved there).
+Increasing this on the 3B would provide more capacity but increase training memory and
+risk overwriting general-purpose knowledge in the lower layers.
+
+**`lora_parameters.rank: 8`**
+The rank of the two low-rank matrices A and B inserted into each adapted layer
+(the adapter's weight delta is `scale * A @ B^T`). Trainable parameters per adapted
+layer ≈ `2 * rank * hidden_dim`. Rank 8 is the mlx-lm validated default and appropriate
+for datasets of ~500 examples. Too low (rank 4) risks insufficient expressiveness — the
+adapter may not have enough capacity to encode the full register shift. Too high
+(rank 16–64) risks overfitting on this small dataset and exceeds the M4 memory budget
+during training. The LIMA hypothesis suggests that data quality, not model capacity,
+drives style adaptation — so rank 8 is the right tradeoff here.
+
+**`lora_parameters.scale: 20.0`**
+Scalar multiplier applied to the adapter's output before it is added to the base layer's
+output. Controls how aggressively the adapter overrides base model behaviour. 20.0 is the
+mlx-lm default. Lower values (8–10) produce subtler style shifts that stay closer to the
+base model; higher values (40+) risk degrading response coherence on out-of-distribution
+queries. **Do not compute this as alpha/rank** — mlx-lm treats it as a direct scalar,
+not a ratio. Using alpha/rank gives 1.0, which effectively disables the adapter
+(Critical Lesson L3).
+
+**`lora_parameters.dropout: 0.0`**
+Fraction of LoRA activations randomly zeroed during each training forward pass —
+a regularisation technique to reduce overfitting. 0.0 is correct here: the dataset
+is small and already high-quality (LIMA-style curation), so adding noise via dropout
+would slow convergence without benefit. If validation loss diverges upward while
+training loss keeps falling, increasing dropout to 0.05–0.10 is the first thing to try.
+
+### Training Schedule
+
+**`batch_size: 4`**
+Number of training examples processed per gradient update step. Larger batches produce
+smoother, lower-variance gradient estimates and a more stable loss curve, but require more
+GPU memory. 4 is the practical ceiling on M4 16 GB unified RAM with the 3B 4-bit model
+at `max_seq_length: 768`. The 1B configs could potentially run at batch_size=8 given the
+smaller memory footprint, but keeping it at 4 preserves identical training dynamics for
+a clean ablation comparison.
+
+**`iters: 600`**
+Total gradient update steps — not epochs. With ~475 training examples per role and
+`batch_size: 4`, 600 steps ≈ 5 passes over the data. Chosen by watching validation loss
+curves during early experiments: fewer than ~400 steps left the style signal too weak;
+beyond ~700 steps validation loss began to rise (overfitting). The `save_every: 100`
+checkpoints allow post-hoc selection of the best step if the final checkpoint overfits.
+
+**`learning_rate: 1e-5`**
+Step size for each gradient update. 1e-5 is the mlx-lm validated default for QLoRA on
+Llama 3.2 (Critical Lesson L3). Values above ~5e-5 cause loss spikes; above 1e-4 produce
+NaN gradients from step 1 on a 4-bit quantized model. Values below 1e-6 converge too
+slowly — the style adaptation would not emerge within 600 steps. This is the most
+consequential single hyperparameter in the config.
+
+**`lr_schedule.name: cosine_decay` + `warmup: 100`**
+The learning rate ramps linearly from 0 to `learning_rate` over the first 100 steps
+(warmup), then follows a cosine curve decaying toward 0 at step 600. Warmup prevents
+large destabilising weight updates in the early steps when gradient estimates are noisiest
+and the adapter weights are freshly initialised near zero. Without warmup, early loss
+spikes are more likely and the initial weight changes can be hard to recover from.
+The cosine decay (vs. constant LR) smoothly reduces the step size toward the end of
+training, allowing fine-grained convergence without requiring a manually tuned decay point.
+
+**`mask_prompt: true`**
+When true, the cross-entropy loss is computed only over assistant response tokens —
+the user turn tokens contribute zero gradient. This is the single most important
+training setting after the data format. Without it, the model spends capacity learning
+to predict the user's question, which adds noise, slows convergence, and dilutes the
+adapter's register signal. Always true for this project.
+
+**`max_seq_length: 768`**
+Sequences longer than 768 tokens are truncated before entering the model.
+768 tokens ≈ 550 words, sufficient for all hospital-guide Q&A pairs in the dataset.
+Attention memory scales quadratically with sequence length — increasing this to 1024+
+would significantly slow training on M4. Decreasing to 512 risks truncating longer
+assistant responses, which would produce broken training targets and degrade output quality.
+
+**`seed: 42`**
+Random seed for adapter weight initialisation and training data shuffling. Fixed for
+fully reproducible runs. Changing this produces a different but equally valid adapter —
+useful for verifying result stability across seeds, or building a seed ensemble.
+
+### Inference Settings
+
+All inference uses `mlx_lm.generate` with no sampling parameters explicitly set.
+All values below are mlx-lm defaults — they are documented here because they are
+consequential and not visible in the source without reading the mlx-lm internals.
+
+**`temperature: 0.0`** (default — greedy decoding)
+Scales the model's output logits before token selection. At 0.0, the highest-probability
+token is always chosen — fully deterministic, no randomness. This is the right choice for
+a pediatric medical context: identical queries always produce identical responses, and
+there is zero chance of an unexpected output. The tradeoff is that responses can sound
+slightly formulaic. Values of 0.3–0.5 would introduce natural conversational variation
+while remaining conservative. Values above 1.0 produce increasingly unpredictable outputs
+and are not appropriate here.
+
+**`top_p: 1.0`** (default — nucleus sampling disabled)
+At each generation step, restricts sampling to the smallest set of tokens whose cumulative
+probability ≥ top_p. At 1.0 all tokens remain eligible. This setting only matters when
+temperature > 0; at temperature=0.0 there is no sampling so top_p has no effect.
+
+**`top_k: 0`** (default — top-k sampling disabled)
+Restricts sampling to the K highest-probability tokens at each step. 0 = disabled.
+Like top_p, irrelevant at temperature=0.0.
+
+**`repetition_penalty: 1.0`** (default — no penalty)
+Divides the logits of previously generated tokens by this factor to discourage the model
+from repeating itself. At 1.0 there is no penalty. Greedy decoding (temperature=0.0) is
+somewhat prone to repetitive loops on long outputs — if this is observed, increasing to
+1.1–1.3 is the first mitigation to try before raising temperature.
+
+**`max_tokens: 300`** (set in `inference.py`, overridable via `--max-tokens`)
+Hard ceiling on the number of tokens generated per response. ~300 tokens ≈ 200–250 words.
+Generation stops at this limit OR at the model's EOS token, whichever comes first.
+Well-trained adapters consistently produce EOS before reaching 300 tokens. Increase this
+if responses are being cut off mid-sentence on longer queries. Decrease it to enforce
+brevity and reduce latency — relevant for VR real-time usage where response time matters.
+
 ## Complete Command Reference
 
 ```bash

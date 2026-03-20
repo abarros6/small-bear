@@ -6,28 +6,99 @@ train: true
 fine_tune_type: "lora"
 data: "data/age_5_11"
 
+# --- LoRA Architecture ---
+# DO NOT set scale=alpha/rank; that is a different convention and causes poor results.
+#
+# num_layers: how many transformer layers (counting from the top) receive LoRA adapters.
+#   The 1B model has 16 layers total; num_layers=16 means ALL layers are fine-tuned.
+#   (Compare: 3B has 28 layers, so 16 there = upper 57%. Here it is 100%.)
+#   Adapting all layers gives the 1B adapter maximum style imprinting capacity to compensate
+#   for the smaller base model's weaker language representation.
+#   Lower values would reduce trainable params but may weaken register adaptation on the 1B.
 num_layers: 16
+
 lora_parameters:
+  # rank: dimensionality of the low-rank weight update matrices (A and B in W + AB^T).
+  #   Trainable parameters per adapted layer ≈ 2 * rank * hidden_dim.
+  #   Lower rank (4) → fewer params, faster, may under-fit style.
+  #   Higher rank (16-64) → more expressive but more memory and overfitting risk on small datasets.
+  #   8 is the mlx-lm default and appropriate for ~500 examples.
   rank: 8
+
+  # scale: multiplier applied to the LoRA output (equivalent to alpha/rank in some frameworks,
+  #   but mlx-lm uses the raw scalar — do NOT compute alpha/rank yourself).
+  #   Controls how strongly the adapter steers the model away from base behaviour.
+  #   Lower (e.g. 8) → subtler style shift, closer to base model outputs.
+  #   Higher (e.g. 40+) → aggressive style imprinting, risk of incoherence on out-of-domain queries.
+  #   20.0 is the mlx-lm default; validated to produce clear age-register separation.
   scale: 20.0
+
+  # dropout: fraction of LoRA activations randomly zeroed during each training forward pass.
+  #   Acts as regularisation to reduce overfitting.
+  #   0.0 = no dropout (appropriate here — dataset is small and already high-quality LIMA-style).
+  #   0.05–0.1 would add regularisation if overfitting is observed on validation loss.
   dropout: 0.0
 
-batch_size: 4
-iters: 600
-learning_rate: 1e-5
-lr_schedule:
-  name: cosine_decay
-  warmup: 100
-  arguments: [1e-5, 600]
+# --- Training Schedule ---
 
+# batch_size: examples processed per gradient update step.
+#   Larger batches → smoother gradient estimates, more stable loss curve, higher memory use.
+#   Smaller batches → noisier gradients (can help escape local minima) but less stable.
+#   4 is safe on M4 16 GB for the 1B model; could potentially try 8 given lower memory footprint.
+batch_size: 4
+
+# iters: total number of gradient update steps (not epochs).
+#   With ~475 training examples and batch_size=4: 600 steps ≈ 5 passes over the data.
+#   Too few → under-trained adapter, weak style signal.
+#   Too many → overfitting (validation loss rises while train loss keeps falling).
+#   Monitor steps_per_eval checkpoints to catch overfitting early.
+iters: 600
+
+# learning_rate: step size applied to each gradient update.
+#   Too high (e.g. 1e-4) → loss spikes, unstable training, possible NaN gradients.
+#   Too low (e.g. 1e-6) → extremely slow convergence; style may not emerge within 600 steps.
+#   1e-5 is the mlx-lm validated default for QLoRA on Llama 3.2. (See Critical Lesson L3.)
+learning_rate: 1e-5
+
+lr_schedule:
+  # cosine_decay: learning rate starts at `learning_rate`, warms up linearly for `warmup` steps,
+  #   then follows a cosine curve decaying toward ~0 by the final iteration.
+  #   Warmup prevents large destabilising weight updates in the first steps when gradients are noisy.
+  #   Removing warmup on a fine-tune of this size risks early loss spikes.
+  name: cosine_decay
+  warmup: 100          # steps over which LR ramps from 0 → learning_rate
+  arguments: [1e-5, 600]  # [peak_lr, total_decay_steps] — must match learning_rate and iters
+
+# mask_prompt: when true, the cross-entropy loss is computed ONLY over assistant response tokens.
+#   The user turn tokens contribute 0 to the gradient.
+#   Effect: the adapter learns to generate age-appropriate responses, not to predict the question.
+#   Setting to false would waste capacity and slow convergence with no benefit.
 mask_prompt: true
 
 adapter_path: "adapters/1b/age_5_11"
+
+# save_every: write a checkpoint every N steps. Allows rolling back to an earlier checkpoint
+#   if later steps overfit. 6 checkpoints total (100, 200, 300, 400, 500, 600).
 save_every: 100
 
+# steps_per_report: print training loss to stdout every N steps. Purely observational.
 steps_per_report: 10
+
+# steps_per_eval: compute validation loss every N steps.
+#   Use these to detect overfitting: if val loss stops decreasing or rises, training has gone too far.
 steps_per_eval: 60
+
+# val_batches: -1 = use the entire validation set for every eval.
+#   A positive integer would subsample (faster but noisier val loss estimates).
 val_batches: -1
 
+# max_seq_length: examples longer than this (in tokens) are truncated.
+#   768 tokens ≈ ~550 words — sufficient for all hospital-guide Q&A pairs.
+#   Longer sequences increase memory quadratically (attention) and slow training.
+#   Shorter (e.g. 512) risks truncating longer responses and producing incomplete training targets.
 max_seq_length: 768
+
+# seed: random seed for weight initialisation and data shuffling. Fixed for reproducibility.
+#   Changing this produces a different (but equally valid) trained adapter — useful for
+#   ensemble experiments or verifying result stability.
 seed: 42
