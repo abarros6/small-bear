@@ -36,13 +36,14 @@ trained on a purpose-built dataset. An ablation study compares 3B vs. 1B paramet
 ## Project Structure
 
 ```
-dr-beary-good-v2/
+small-bear/
 ├── .gitignore
 ├── CLAUDE.md                               # This file
 ├── README.md                               # GitHub-facing docs
+├── COMMANDS.md                             # Full reproduction sequence from clone to results
 ├── requirements.txt                        # Pinned to known working versions
 ├── configs/
-│   ├── age_5_11_3b_lora.yaml
+│   ├── age_5_11_3b_lora.yaml              # Standard: rank 8, 16 layers
 │   ├── age_12_18_3b_lora.yaml
 │   ├── age_5_11_1b_lora.yaml
 │   └── age_12_18_1b_lora.yaml
@@ -53,13 +54,21 @@ dr-beary-good-v2/
 │   ├── age_5_11/                           # train.jsonl + valid.jsonl (from prepare_data.py)
 │   └── age_12_18/
 ├── adapters/                               # .gitignored — large binary LoRA weights
-│   ├── 3b/
+│   ├── 3b/                                 # Standard adapters (rank 8, 16 layers)
 │   │   ├── age_5_11/
 │   │   └── age_12_18/
-│   └── 1b/
-│       ├── age_5_11/
-│       └── age_12_18/
+│   ├── 1b/
+│   │   ├── age_5_11/
+│   │   └── age_12_18/
+│   └── fast/                               # Fast-bear adapters (rank 4, 8 layers)
+│       ├── 3b/
+│       │   ├── age_5_11/
+│       │   └── age_12_18/
+│       └── 1b/
+│           ├── age_5_11/
+│           └── age_12_18/
 ├── outputs/                                # .gitignored — model-generated responses
+├── results/                                # .gitignored — evaluation reports (text)
 ├── logs/                                   # .gitignored — training logs
 ├── scripts/
 │   ├── setup.sh                            # mkdir -p all required directories
@@ -68,9 +77,12 @@ dr-beary-good-v2/
 └── src/
     ├── constants.py                        # ROLES, BASE_MODEL_3B, BASE_MODEL_1B (no system prompts)
     ├── prepare_data.py                     # Source JSONL → per-role train/valid splits (no sys prompt)
-    ├── evaluate.py                         # FK grade, safety (role-scoped), latency evaluation
+    ├── evaluate.py                         # Readability (FK/SMOG/Fog/Coleman/TTR), safety, latency,
+    │                                       #   tokens/sec, inter-role style separation classifier
     ├── inference.py                        # Explicit-role inference (adapter + optional sys prompt)
+    │                                       #   --variant flag selects adapter subdirectory (e.g. fast)
     └── generate_outputs.py                 # Run inference on valid set → outputs/ for evaluation
+                                            #   --variant, --base flags; writes token_count + tps
 ```
 
 **NOT in this repo:**
@@ -296,18 +308,15 @@ bash scripts/setup.sh                   # creates all required directories
 # Drop source JSONL files into data/source/, then:
 python src/prepare_data.py              # reads ALL *.jsonl from data/source/, splits per-role
 
-# --- TRAINING ---
-# Primary (3B base model):
-bash scripts/train_3b.sh               # trains age_5_11 and age_12_18 adapters on 3B
+# --- TRAINING (standard — rank 8, 16 layers) ---
+# Do NOT run both simultaneously — GPU OOM on M4 16 GB.
+bash scripts/train_3b.sh               # → adapters/3b/{role}/
+bash scripts/train_1b.sh               # → adapters/1b/{role}/
 
-# Ablation (1B base model):
-bash scripts/train_1b.sh               # trains age_5_11 and age_12_18 adapters on 1B
-
-# Or individually:
-mlx_lm.lora --config configs/age_5_11_3b_lora.yaml 2>&1 | tee logs/age_5_11_3b.log
-mlx_lm.lora --config configs/age_12_18_3b_lora.yaml 2>&1 | tee logs/age_12_18_3b.log
-mlx_lm.lora --config configs/age_5_11_1b_lora.yaml 2>&1 | tee logs/age_5_11_1b.log
-mlx_lm.lora --config configs/age_12_18_1b_lora.yaml 2>&1 | tee logs/age_12_18_1b.log
+# --- TRAINING (fast-bear branch — rank 4, 8 layers) ---
+# git checkout fast-bear first; configs write to adapters/fast/
+bash scripts/train_3b.sh               # → adapters/fast/3b/{role}/
+bash scripts/train_1b.sh               # → adapters/fast/1b/{role}/
 
 # --- INFERENCE (no system prompt — matches training conditions) ---
 python src/inference.py --role age_5_11 --query "Will the X-ray hurt?"
@@ -315,6 +324,9 @@ python src/inference.py --role age_12_18 --query "Will the X-ray hurt?"
 
 # 1B ablation:
 python src/inference.py --role age_5_11 --model-size 1b --query "Will the X-ray hurt?"
+
+# Fast variant:
+python src/inference.py --role age_5_11 --variant fast --query "Will the X-ray hurt?"
 
 # Compare against untuned base model (no adapter, no system prompt):
 python src/inference.py --base --query "Will the X-ray hurt?"
@@ -331,13 +343,21 @@ python src/inference.py --benchmark    # runs standard queries across both roles
 cat data/source/train/*.jsonl > /tmp/all_train.jsonl
 python src/evaluate.py --data /tmp/all_train.jsonl
 
-# Generate model outputs from the validation set (run AFTER training)
-python src/generate_outputs.py                      # 3B adapters, both roles
-python src/generate_outputs.py --model-size 1b      # 1B ablation
+# Generate model outputs — run one at a time (GPU OOM if concurrent)
+python src/generate_outputs.py                              # standard 3B
+python src/generate_outputs.py --model-size 1b             # standard 1B
+python src/generate_outputs.py --variant fast              # fast 3B
+python src/generate_outputs.py --variant fast --model-size 1b   # fast 1B
+python src/generate_outputs.py --base                      # base 3B (no adapter)
+python src/generate_outputs.py --base --model-size 1b     # base 1B
 
-# Evaluate model outputs
-python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency
-python src/evaluate.py --data outputs/all_1b_outputs.jsonl --latency
+# Evaluate model outputs — saves to results/ and prints to stdout
+python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency --separation --output results/standard_3b_eval.txt
+python src/evaluate.py --data outputs/all_1b_outputs.jsonl --latency --separation --output results/standard_1b_eval.txt
+python src/evaluate.py --data outputs/all_fast_3b_outputs.jsonl --latency --separation --output results/fast_3b_eval.txt
+python src/evaluate.py --data outputs/all_fast_1b_outputs.jsonl --latency --separation --output results/fast_1b_eval.txt
+python src/evaluate.py --data outputs/all_base_3b_outputs.jsonl --latency --separation --output results/base_3b_eval.txt
+python src/evaluate.py --data outputs/all_base_1b_outputs.jsonl --latency --separation --output results/base_1b_eval.txt
 ```
 
 ## Critical Lessons — DO NOT REPEAT THESE MISTAKES
@@ -406,6 +426,7 @@ transformers    5.2.0
 datasets        4.6.0
 textstat        0.7.13
 numpy           >=1.26.0
+scikit-learn    >=1.4.0   (inter-role style separation classifier in evaluate.py)
 ```
 
 ## Ablation Study: 3B vs. 1B

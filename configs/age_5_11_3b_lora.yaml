@@ -12,18 +12,21 @@ data: "data/age_5_11"
 # DO NOT set scale=alpha/rank; that is a different convention and causes poor results.
 #
 # num_layers: how many transformer layers (counting from the top) receive LoRA adapters.
-#   The 3B model has 28 layers total; 16 means the upper 16 layers are fine-tuned.
+#   The 3B model has 28 layers total; 8 means the upper 8 layers (29%) are fine-tuned.
+#   Style and register are high-level semantic properties — upper layers are where they live.
+#   Reduced from 16 on fast-bear branch to shrink adapter size and speed up training.
 #   Lower values → fewer trainable parameters, faster training, weaker style imprinting.
 #   Higher values → stronger adaptation but more memory and risk of over-writing general knowledge.
-num_layers: 16
+num_layers: 8
 
 lora_parameters:
   # rank: dimensionality of the low-rank weight update matrices (A and B in W + AB^T).
   #   Trainable parameters per adapted layer ≈ 2 * rank * hidden_dim.
   #   Lower rank (4) → fewer params, faster, may under-fit style.
   #   Higher rank (16-64) → more expressive but more memory and overfitting risk on small datasets.
-  #   8 is the mlx-lm default and appropriate for ~500 examples.
-  rank: 8
+  #   Reduced to 4 on fast-bear branch — register adaptation is a simple style shift,
+  #   not knowledge acquisition, so rank 4 may be sufficient. Halves adapter parameter count.
+  rank: 4
 
   # scale: multiplier applied to the LoRA output (equivalent to alpha/rank in some frameworks,
   #   but mlx-lm uses the raw scalar — do NOT compute alpha/rank yourself).
@@ -75,7 +78,7 @@ lr_schedule:
 #   Setting to false would waste capacity and slow convergence with no benefit.
 mask_prompt: true
 
-adapter_path: "adapters/3b/age_5_11"
+adapter_path: "adapters/fast/3b/age_5_11"
 
 # save_every: write a checkpoint every N steps. Allows rolling back to an earlier checkpoint
 #   if later steps overfit. 6 checkpoints total (100, 200, 300, 400, 500, 600).

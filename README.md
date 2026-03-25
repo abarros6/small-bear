@@ -29,12 +29,14 @@ than the base model is held constant. Inline comments in the YAML files explain 
 
 ### LoRA (training)
 
-| Parameter | Value | Why |
-|-----------|-------|-----|
-| `num_layers` | 16 | Adapts the upper 57% of the 3B model's 28 layers (all 16 of the 1B). Upper layers carry stylistic/semantic decisions — the highest-value target for register adaptation. |
-| `rank` | 8 | Dimensionality of the adapter's low-rank matrices. mlx-lm default; right-sized for ~500 training examples. Too low → insufficient style capacity; too high → overfitting. |
-| `scale` | 20.0 | Multiplier on the adapter output before adding to the base layer. mlx-lm default. **Do not compute as alpha/rank** — that convention gives 1.0 and effectively disables the adapter. |
-| `dropout` | 0.0 | No regularisation. Dataset is small and high-quality (LIMA-style), so dropout adds noise with no benefit. Raise to 0.05–0.1 only if validation loss diverges. |
+Two adapter variants exist. All other hyperparameters are identical between them.
+
+| Parameter | Standard (`main`) | Fast (`fast-bear`) | Why |
+|-----------|-------------------|--------------------|-----|
+| `num_layers` | 16 | 8 | Standard adapts upper 57% of 3B (all of 1B). Fast halves this to test whether style signal lives in the top layers alone. |
+| `rank` | 8 | 4 | Standard is the mlx-lm default for ~500 examples. Fast halves adapter parameter count — register is a simple style shift, not knowledge acquisition, so rank 4 may be sufficient. |
+| `scale` | 20.0 | 20.0 | Multiplier on adapter output. mlx-lm default. **Do not compute as alpha/rank** — that gives 1.0 and effectively disables the adapter. |
+| `dropout` | 0.0 | 0.0 | No regularisation. Dataset is small and high-quality (LIMA-style), so dropout adds noise with no benefit. |
 
 ### Training schedule
 
@@ -70,7 +72,7 @@ bash scripts/setup.sh
 # Drop source JSONL files into data/source/, then:
 python src/prepare_data.py
 
-# Train (3B primary, then 1B ablation):
+# Train standard adapters (3B primary, then 1B ablation):
 bash scripts/train_3b.sh
 bash scripts/train_1b.sh
 
@@ -79,10 +81,18 @@ python src/inference.py --role age_5_11 --query "Will the X-ray hurt?"
 python src/inference.py --role age_12_18 --query "Will the X-ray hurt?"
 python src/inference.py --benchmark
 
+# Fast variant inference
+python src/inference.py --role age_5_11 --variant fast --query "Will the X-ray hurt?"
+
+# Base model comparison (no adapter)
+python src/inference.py --base --query "Will the X-ray hurt?"
+
 # With system prompt (VR deployment context)
 python src/inference.py --role age_5_11 --query "Will the X-ray hurt?" \
     --system-prompt "You are Dr. Beary Good at Victoria Hospital."
 ```
+
+See `COMMANDS.md` for the full reproduction sequence from clone to evaluated results.
 
 ## Evaluation
 
@@ -91,10 +101,35 @@ python src/inference.py --role age_5_11 --query "Will the X-ray hurt?" \
 cat data/source/train/*.jsonl > /tmp/all_train.jsonl
 python src/evaluate.py --data /tmp/all_train.jsonl
 
-# Model output quality (after training)
-python src/generate_outputs.py
-python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency
+# Generate outputs — run one at a time (GPU OOM if concurrent)
+python src/generate_outputs.py                             # standard 3B
+python src/generate_outputs.py --model-size 1b            # standard 1B
+python src/generate_outputs.py --variant fast             # fast 3B
+python src/generate_outputs.py --variant fast --model-size 1b  # fast 1B
+python src/generate_outputs.py --base                     # base 3B (no adapter)
+python src/generate_outputs.py --base --model-size 1b    # base 1B
+
+# Evaluate — all metrics, save to results/
+python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency --separation --output results/standard_3b_eval.txt
+python src/evaluate.py --data outputs/all_1b_outputs.jsonl --latency --separation --output results/standard_1b_eval.txt
+python src/evaluate.py --data outputs/all_fast_3b_outputs.jsonl --latency --separation --output results/fast_3b_eval.txt
+python src/evaluate.py --data outputs/all_fast_1b_outputs.jsonl --latency --separation --output results/fast_1b_eval.txt
+python src/evaluate.py --data outputs/all_base_3b_outputs.jsonl --latency --separation --output results/base_3b_eval.txt
+python src/evaluate.py --data outputs/all_base_1b_outputs.jsonl --latency --separation --output results/base_1b_eval.txt
 ```
+
+### Evaluation Metrics
+
+| Metric | Description |
+|--------|-------------|
+| Flesch-Kincaid Grade | Primary readability target — age_5_11 must stay ≤ 7.0 |
+| SMOG | Readability designed for health text; more sensitive to medical vocabulary than FK |
+| Gunning Fog | Penalises polysyllabic words; complements FK |
+| Coleman-Liau | Character-based grade level; cross-check for FK/SMOG |
+| Lexical Diversity (TTR) | Unique words / total words — lower expected for age_5_11 |
+| Safety pass rate | Checks for inappropriate diagnosis, poor emergency escalation, age-inappropriate content |
+| Tokens/second | Generation throughput — key VR deployment metric |
+| Inter-role classifier | TF-IDF + LR accuracy distinguishing roles — high score = strong style separation |
 
 ## Project Structure
 

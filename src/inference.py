@@ -45,15 +45,15 @@ from constants import BASE_MODEL_3B, BASE_MODEL_1B, ROLES
 ADAPTER_DIR = Path("adapters")
 
 
-def load_model(role: str, model_size: str = "3b", use_base: bool = False):
+def load_model(role: str, model_size: str = "3b", use_base: bool = False, variant: str = ""):
     """Load model and tokenizer.
 
     Args:
         role: One of the values in ROLES.
         model_size: '3b' or '1b' — selects base model for ablation study.
         use_base: Load the raw base model with no adapter (for comparison).
-
-    Default: loads base model + LoRA adapter from adapters/{model_size}/{role}/.
+        variant: Adapter subdirectory prefix, e.g. 'fast' → adapters/fast/{size}/{role}.
+                 Empty string (default) → adapters/{size}/{role}.
 
     Returns:
         (model, tokenizer)
@@ -66,7 +66,7 @@ def load_model(role: str, model_size: str = "3b", use_base: bool = False):
         print(f"Loading base model (no adapter): {base_model}", file=sys.stderr)
         return load(base_model)
 
-    adapter_path = ADAPTER_DIR / model_size / role
+    adapter_path = ADAPTER_DIR / variant / model_size / role if variant else ADAPTER_DIR / model_size / role
     if not adapter_path.exists():
         print(f"Error: adapter not found at {adapter_path}", file=sys.stderr)
         print(f"  Train first: mlx_lm.lora --config configs/{role}_{model_size}_lora.yaml",
@@ -177,6 +177,8 @@ def main():
                              "decrease to reduce latency. EOS usually fires before this cap.")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Show latency after each response")
+    parser.add_argument("--variant", default="",
+                        help="Adapter variant subdirectory, e.g. 'fast' → adapters/fast/{size}/{role}")
 
     args = parser.parse_args()
 
@@ -205,7 +207,7 @@ def main():
         for query, role in benchmark_queries:
             key = f"{role}_{args.model_size}"
             if key not in models:
-                models[key] = load_model(role, model_size=args.model_size, use_base=args.base)
+                models[key] = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
             model, tokenizer = models[key]
             response, latency = generate_response(
                 model, tokenizer, query,
@@ -231,7 +233,7 @@ def main():
         print(f"System prompt: {'none' if not args.system_prompt else repr(args.system_prompt[:60] + '...')}")
         print("Type a query and press Enter. Type 'quit' to exit.\n")
 
-        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base)
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
 
         while True:
             try:
@@ -255,7 +257,7 @@ def main():
 
     elif args.query:
         role = args.role or ROLES[0]
-        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base)
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
         response, latency = generate_response(
             model, tokenizer, args.query,
             system_prompt=args.system_prompt,
