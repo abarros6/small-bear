@@ -6,12 +6,23 @@ Loads each adapter, runs inference on data/{role}/valid.jsonl (no system prompt,
 matching training conditions), and writes results to outputs/.
 
 Output format per example:
-    {"instruction": "...", "response": "...", "role": "...", "model_size": "...", "latency": 0.0}
+    {
+        "instruction": "...",
+        "response":    "...",
+        "role":        "age_5_11" | "age_12_18",
+        "model_size":  "3b" | "1b",
+        "latency":     0.0,          # total generation time in seconds
+        "token_count": 0,            # tokens in the response
+        "tokens_per_second": 0.0     # throughput
+    }
 
 Usage:
-    python src/generate_outputs.py                    # 3B, both roles
-    python src/generate_outputs.py --model-size 1b   # 1B ablation
-    python src/generate_outputs.py --role age_5_11   # single role
+    python src/generate_outputs.py                              # standard 3B, both roles
+    python src/generate_outputs.py --model-size 1b             # standard 1B ablation
+    python src/generate_outputs.py --variant fast              # fast 3B adapters
+    python src/generate_outputs.py --variant fast --model-size 1b  # fast 1B
+    python src/generate_outputs.py --base                      # base model, no adapter
+    python src/generate_outputs.py --role age_5_11             # single role
 """
 
 import argparse
@@ -27,7 +38,20 @@ DATA_DIR = Path("data")
 OUTPUT_DIR = Path("outputs")
 
 
-def generate_for_role(role: str, model_size: str, max_tokens: int) -> list:
+def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str = "", use_base: bool = False) -> list:
+    """Run inference on the validation set for one role and return results.
+
+    Args:
+        role:       Role to evaluate — one of ROLES (e.g. 'age_5_11').
+        model_size: Base model size — '3b' or '1b'.
+        max_tokens: Hard token ceiling passed to generate_response.
+        variant:    Adapter subdirectory prefix, e.g. 'fast' → adapters/fast/{size}/{role}.
+                    Empty string (default) uses adapters/{size}/{role}.
+        use_base:   If True, load base model with no adapter (baseline comparison).
+
+    Returns:
+        List of result dicts, one per validation example.
+    """
     valid_path = DATA_DIR / role / "valid.jsonl"
     if not valid_path.exists():
         print(f"  Error: {valid_path} not found. Run prepare_data.py first.")
@@ -48,8 +72,8 @@ def generate_for_role(role: str, model_size: str, max_tokens: int) -> list:
         print(f"  Warning: {valid_path} is empty.")
         return []
 
-    print(f"\n  Loading {role} ({model_size})...")
-    model, tokenizer = load_model(role, model_size=model_size)
+    print(f"\n  Loading {role} ({model_size}{f'/{variant}' if variant else ''}{' base' if use_base else ''})...")
+    model, tokenizer = load_model(role, model_size=model_size, variant=variant, use_base=use_base)
 
     results = []
     for i, instruction in enumerate(instructions):
@@ -59,12 +83,15 @@ def generate_for_role(role: str, model_size: str, max_tokens: int) -> list:
             system_prompt=None,
             max_tokens=max_tokens,
         )
+        token_count = len(tokenizer.encode(response))
         results.append({
             "instruction": instruction,
             "response": response,
             "role": role,
             "model_size": model_size,
             "latency": round(latency, 3),
+            "token_count": token_count,
+            "tokens_per_second": round(token_count / latency, 1) if latency > 0 else 0.0,
         })
         print(f"  [{i+1:3d}/{len(instructions)}] {latency:.2f}s  {instruction[:55]}")
 
@@ -77,18 +104,29 @@ def main():
     parser.add_argument("--model-size", choices=["3b", "1b"], default="3b",
                         help="Base model size (default: 3b)")
     parser.add_argument("--max-tokens", type=int, default=300)
+    parser.add_argument("--variant", default="",
+                        help="Adapter variant subdirectory, e.g. 'fast' → adapters/fast/{size}/{role}. "
+                             "Output files will be prefixed with the variant name.")
+    parser.add_argument("--base", action="store_true",
+                        help="Run on the base model with no adapter (for baseline comparison).")
     args = parser.parse_args()
 
     roles = [args.role] if args.role else ROLES
     OUTPUT_DIR.mkdir(exist_ok=True)
 
+    if args.base:
+        tag = "base_"
+    elif args.variant:
+        tag = f"{args.variant}_"
+    else:
+        tag = ""
     all_results = []
     for role in roles:
-        results = generate_for_role(role, args.model_size, args.max_tokens)
+        results = generate_for_role(role, args.model_size, args.max_tokens, args.variant, args.base)
         if not results:
             continue
 
-        role_path = OUTPUT_DIR / f"{role}_{args.model_size}_outputs.jsonl"
+        role_path = OUTPUT_DIR / f"{tag}{role}_{args.model_size}_outputs.jsonl"
         with open(role_path, "w") as f:
             for r in results:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -96,7 +134,7 @@ def main():
         all_results.extend(results)
 
     if all_results:
-        combined_path = OUTPUT_DIR / f"all_{args.model_size}_outputs.jsonl"
+        combined_path = OUTPUT_DIR / f"all_{tag}{args.model_size}_outputs.jsonl"
         with open(combined_path, "w") as f:
             for r in all_results:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")

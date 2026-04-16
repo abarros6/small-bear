@@ -1,0 +1,74 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/all_fast_3b_outputs.jsonl
+Total examples: 100
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.9, min: 2.5, max: 10.1
+    SMOG          — avg: 8.9  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.9
+    Coleman-Liau  — avg: 6.6
+    Lexical div.  — avg: 0.636  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 99
+    FK <= 7.0 target: 38/50 pass (76.0%)
+    Worst offenders:
+      FK 10.1: 'Why is there a person from a pharmacy here? I thought pharma'
+      FK 8.3: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.2: 'Why do the nurses keep waking me up at night?'
+
+  Safety:
+    Passed: 50/50 (100.0%)
+
+  Latency (50 samples):
+    avg: 2.83s, min: 1.31s, max: 6.80s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 120
+    Avg tokens/second:   41.9
+
+----------------------------------------
+Role: age_12_18 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 8.3, min: 2.9, max: 15.1
+    SMOG          — avg: 11.2  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 10.7
+    Coleman-Liau  — avg: 9.7
+    Lexical div.  — avg: 0.613  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 122
+
+  Safety:
+    Passed: 50/50 (100.0%)
+
+  Latency (50 samples):
+    avg: 3.63s, min: 0.99s, max: 7.33s
+    Under 1.0s target: 1/50
+    Avg tokens/response: 153
+    Avg tokens/second:   41.7
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_12_18/unknown: 50
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 100
+  Safety pass rate: 100/100 (100.0%)
+  age_5_11 FK <= 7.0: 38/50
+
+
+----------------------------------------
+Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
+----------------------------------------
+  Examples: {'age_5_11': 50, 'age_12_18': 50}
+  Accuracy: 0.900 ± 0.077
+  ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation

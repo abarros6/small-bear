@@ -2,12 +2,10 @@
 
 ## What This Is
 
-ECE9660 final project (Western University, Winter 2026). A role-adaptive LLM ("Dr. Beary Good")
-for a VR pediatric hospital guide at Victoria Hospital, London ON. The system serves two
-pediatric age groups — ages 5–11 and ages 12–18 — by switching between two LoRA adapters
-trained on a purpose-built dataset. An ablation study compares 3B vs. 1B parameter base models.
-
-**Project category**: Model Training & Alignment + Safety, Bias & Responsible AI
+A role-adaptive LLM ("Dr. Beary Good") for a VR pediatric hospital guide at Victoria Hospital,
+London ON. The system serves two pediatric age groups — ages 5–11 and ages 12–18 — by switching
+between two LoRA adapters trained on a purpose-built dataset. An ablation study compares
+3B vs. 1B parameter base models across two adapter configurations (rank 8/16 layers and rank 4/8 layers).
 
 ## Research Contributions
 
@@ -36,15 +34,16 @@ trained on a purpose-built dataset. An ablation study compares 3B vs. 1B paramet
 ## Project Structure
 
 ```
-dr-beary-good-v2/
+small-bear/
 ├── .gitignore
 ├── CLAUDE.md                               # This file
 ├── README.md                               # GitHub-facing docs
+├── COMMANDS.md                             # Full reproduction sequence from clone to results
 ├── requirements.txt                        # Pinned to known working versions
 ├── configs/
-│   ├── age_5_11_3b_lora.yaml
+│   ├── age_5_11_3b_lora.yaml              # rank 4, 8 layers → adapters/fast/3b/
 │   ├── age_12_18_3b_lora.yaml
-│   ├── age_5_11_1b_lora.yaml
+│   ├── age_5_11_1b_lora.yaml              # rank 4, 8 layers → adapters/fast/1b/
 │   └── age_12_18_1b_lora.yaml
 ├── data/
 │   ├── source/
@@ -53,13 +52,21 @@ dr-beary-good-v2/
 │   ├── age_5_11/                           # train.jsonl + valid.jsonl (from prepare_data.py)
 │   └── age_12_18/
 ├── adapters/                               # .gitignored — large binary LoRA weights
-│   ├── 3b/
+│   ├── 3b/                                 # Standard adapters (rank 8, 16 layers)
 │   │   ├── age_5_11/
 │   │   └── age_12_18/
-│   └── 1b/
-│       ├── age_5_11/
-│       └── age_12_18/
+│   ├── 1b/                                 # Standard adapters (rank 8, 16 layers)
+│   │   ├── age_5_11/
+│   │   └── age_12_18/
+│   └── fast/                               # Fast adapters (rank 4, 8 layers) — current configs write here
+│       ├── 3b/
+│       │   ├── age_5_11/
+│       │   └── age_12_18/
+│       └── 1b/
+│           ├── age_5_11/
+│           └── age_12_18/
 ├── outputs/                                # .gitignored — model-generated responses
+├── results/                                # .gitignored — evaluation reports
 ├── logs/                                   # .gitignored — training logs
 ├── scripts/
 │   ├── setup.sh                            # mkdir -p all required directories
@@ -68,9 +75,12 @@ dr-beary-good-v2/
 └── src/
     ├── constants.py                        # ROLES, BASE_MODEL_3B, BASE_MODEL_1B (no system prompts)
     ├── prepare_data.py                     # Source JSONL → per-role train/valid splits (no sys prompt)
-    ├── evaluate.py                         # FK grade, safety (role-scoped), latency evaluation
+    ├── evaluate.py                         # Readability (FK/SMOG/Fog/Coleman/TTR), latency,
+    │                                       #   tokens/sec, inter-role style separation classifier
     ├── inference.py                        # Explicit-role inference (adapter + optional sys prompt)
+    │                                       #   --variant flag selects adapter subdirectory (e.g. fast)
     └── generate_outputs.py                 # Run inference on valid set → outputs/ for evaluation
+                                            #   --variant, --base flags; writes token_count + tps
 ```
 
 **NOT in this repo:**
@@ -156,27 +166,33 @@ All four configs share identical hyperparameter values. The only differences bet
 `model`, `data`, and `adapter_path`. This is intentional — the ablation study is valid only
 if every other variable is held constant.
 
+Two adapter configurations exist. The current configs produce the fast variant (`adapters/fast/`).
+Standard adapters (`adapters/3b/` and `adapters/1b/`) were trained with rank 8 / 16 layers.
+
+| Parameter | Standard | Fast (current configs) |
+|-----------|----------|------------------------|
+| `num_layers` | 16 | **8** |
+| `rank` | 8 | **4** |
+| `scale` | 20.0 | 20.0 |
+| `dropout` | 0.0 | 0.0 |
+
 ### LoRA Architecture
 
-**`num_layers: 16`**
+**`num_layers: 8`** (current configs; standard was 16)
 How many transformer layers (counted from the top) receive LoRA adapter matrices.
-The 3B model has 28 layers total — `num_layers: 16` adapts the upper 57%.
-The 1B model has 16 layers total — `num_layers: 16` adapts all of them.
+The 3B model has 28 layers total — `num_layers: 8` adapts the upper 29%.
+The 1B model has 16 layers total — `num_layers: 8` adapts the upper 50%.
 Upper layers handle high-level semantic and stylistic decisions, making them the
-highest-value target for register adaptation. Lower layers handle token-level
-representations and are left untouched (shared base behaviour is preserved there).
-Increasing this on the 3B would provide more capacity but increase training memory and
-risk overwriting general-purpose knowledge in the lower layers.
+highest-value target for register adaptation. Halving from 16 to 8 layers tests whether
+the style signal lives primarily in the top layers — results confirmed it does, with
+comparable or superior style separation at reduced adapter size.
 
-**`lora_parameters.rank: 8`**
+**`lora_parameters.rank: 4`** (current configs; standard was 8)
 The rank of the two low-rank matrices A and B inserted into each adapted layer
 (the adapter's weight delta is `scale * A @ B^T`). Trainable parameters per adapted
-layer ≈ `2 * rank * hidden_dim`. Rank 8 is the mlx-lm validated default and appropriate
-for datasets of ~500 examples. Too low (rank 4) risks insufficient expressiveness — the
-adapter may not have enough capacity to encode the full register shift. Too high
-(rank 16–64) risks overfitting on this small dataset and exceeds the M4 memory budget
-during training. The LIMA hypothesis suggests that data quality, not model capacity,
-drives style adaptation — so rank 8 is the right tradeoff here.
+layer ≈ `2 * rank * hidden_dim`. Rank 4 halves the adapter parameter count versus rank 8.
+Register adaptation is a simple style shift, not knowledge acquisition, so rank 4 is
+sufficient — results confirmed comparable or superior style separation on most variants.
 
 **`lora_parameters.scale: 20.0`**
 Scalar multiplier applied to the adapter's output before it is added to the base layer's
@@ -297,17 +313,10 @@ bash scripts/setup.sh                   # creates all required directories
 python src/prepare_data.py              # reads ALL *.jsonl from data/source/, splits per-role
 
 # --- TRAINING ---
-# Primary (3B base model):
-bash scripts/train_3b.sh               # trains age_5_11 and age_12_18 adapters on 3B
-
-# Ablation (1B base model):
-bash scripts/train_1b.sh               # trains age_5_11 and age_12_18 adapters on 1B
-
-# Or individually:
-mlx_lm.lora --config configs/age_5_11_3b_lora.yaml 2>&1 | tee logs/age_5_11_3b.log
-mlx_lm.lora --config configs/age_12_18_3b_lora.yaml 2>&1 | tee logs/age_12_18_3b.log
-mlx_lm.lora --config configs/age_5_11_1b_lora.yaml 2>&1 | tee logs/age_5_11_1b.log
-mlx_lm.lora --config configs/age_12_18_1b_lora.yaml 2>&1 | tee logs/age_12_18_1b.log
+# Configs use rank 4, 8 layers → adapters/fast/{size}/{role}/
+# Do NOT run both simultaneously — GPU OOM on M4 16 GB.
+bash scripts/train_3b.sh               # → adapters/fast/3b/{role}/
+bash scripts/train_1b.sh               # → adapters/fast/1b/{role}/
 
 # --- INFERENCE (no system prompt — matches training conditions) ---
 python src/inference.py --role age_5_11 --query "Will the X-ray hurt?"
@@ -315,6 +324,9 @@ python src/inference.py --role age_12_18 --query "Will the X-ray hurt?"
 
 # 1B ablation:
 python src/inference.py --role age_5_11 --model-size 1b --query "Will the X-ray hurt?"
+
+# Fast variant:
+python src/inference.py --role age_5_11 --variant fast --query "Will the X-ray hurt?"
 
 # Compare against untuned base model (no adapter, no system prompt):
 python src/inference.py --base --query "Will the X-ray hurt?"
@@ -331,13 +343,21 @@ python src/inference.py --benchmark    # runs standard queries across both roles
 cat data/source/train/*.jsonl > /tmp/all_train.jsonl
 python src/evaluate.py --data /tmp/all_train.jsonl
 
-# Generate model outputs from the validation set (run AFTER training)
-python src/generate_outputs.py                      # 3B adapters, both roles
-python src/generate_outputs.py --model-size 1b      # 1B ablation
+# Generate model outputs — run one at a time (GPU OOM if concurrent)
+python src/generate_outputs.py                              # standard 3B
+python src/generate_outputs.py --model-size 1b             # standard 1B
+python src/generate_outputs.py --variant fast              # fast 3B
+python src/generate_outputs.py --variant fast --model-size 1b   # fast 1B
+python src/generate_outputs.py --base                      # base 3B (no adapter)
+python src/generate_outputs.py --base --model-size 1b     # base 1B
 
-# Evaluate model outputs
-python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency
-python src/evaluate.py --data outputs/all_1b_outputs.jsonl --latency
+# Evaluate model outputs — saves to results/ and prints to stdout
+python src/evaluate.py --data outputs/all_3b_outputs.jsonl --latency --separation --output results/standard_3b_eval.txt
+python src/evaluate.py --data outputs/all_1b_outputs.jsonl --latency --separation --output results/standard_1b_eval.txt
+python src/evaluate.py --data outputs/all_fast_3b_outputs.jsonl --latency --separation --output results/fast_3b_eval.txt
+python src/evaluate.py --data outputs/all_fast_1b_outputs.jsonl --latency --separation --output results/fast_1b_eval.txt
+python src/evaluate.py --data outputs/all_base_3b_outputs.jsonl --latency --separation --output results/base_3b_eval.txt
+python src/evaluate.py --data outputs/all_base_1b_outputs.jsonl --latency --separation --output results/base_1b_eval.txt
 ```
 
 ## Critical Lessons — DO NOT REPEAT THESE MISTAKES
@@ -406,29 +426,29 @@ transformers    5.2.0
 datasets        4.6.0
 textstat        0.7.13
 numpy           >=1.26.0
+scikit-learn    >=1.4.0   (inter-role style separation classifier in evaluate.py)
 ```
 
-## Ablation Study: 3B vs. 1B
+## Ablation Study: 3B vs. 1B vs. Standard vs. Fast
 
-Both roles are trained on both base models using identical hyperparameters and data.
+All four adapter variants have been trained and evaluated. Results live in `results/`.
 
-| Experiment | Base model | Adapter paths | Config files |
-|------------|------------|---------------|--------------|
-| Primary | Llama-3.2-3B-Instruct-4bit | adapters/3b/{role}/ | *_3b_lora.yaml |
-| Ablation | Llama-3.2-1B-Instruct-4bit | adapters/1b/{role}/ | *_1b_lora.yaml |
+| Variant | Base model | Adapter paths |
+|---------|------------|---------------|
+| Standard 3B | Llama-3.2-3B-Instruct-4bit | adapters/3b/{role}/ |
+| Standard 1B | Llama-3.2-1B-Instruct-4bit | adapters/1b/{role}/ |
+| Fast 3B | Llama-3.2-3B-Instruct-4bit | adapters/fast/3b/{role}/ |
+| Fast 1B | Llama-3.2-1B-Instruct-4bit | adapters/fast/1b/{role}/ |
 
-**Expected tradeoffs:**
-- 1B: ~2× latency improvement; age_5_11 likely fine; age_12_18 more nuanced language may degrade
-- Evaluation metrics to compare: FK grade, safety pass rate, latency, qualitative output quality
+**Key findings from evaluation:**
+- Fast 3B is *slower* than Standard 3B despite fewer adapter parameters — rank/layer reduction
+  changed output length behaviour (120 vs 92 tokens avg). Tokens/sec is comparable; more tokens
+  generated explains the latency increase.
+- Fast 1B is the deployment recommendation: 70% of responses under 1s target, highest
+  inter-role classifier accuracy (0.940), competitive FK pass rate.
+- Evaluation metrics: FK grade, latency, tokens/sec, inter-role classifier accuracy.
 
 **Why Llama 1B (not Qwen or other small models):**
 Same family as the 3B base — same tokenizer, same chat template, same `apply_chat_template`
 behaviour. Drop-in replacement. Other small models require revalidating the entire data pipeline.
 
-## Academic Context
-
-- **Report due**: April 14, 2026 (IEEE Transactions format, 6-page double-column + appendix)
-- **Presentation**: March 26, 2026 slides submission; present March 27 or April 10, 2026
-- **Appendix must include**: GitHub link, member contributions, all Claude chat transcripts
-- **Save ALL Claude conversation logs** as .txt — required for submission
-- **Grading**: Report 30% + Code repo 3% + Presentation 15% + Proposal 2% = 50% of grade
