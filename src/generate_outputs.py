@@ -19,8 +19,8 @@ Output format per example:
 Usage:
     python src/generate_outputs.py                              # standard 3B, both roles
     python src/generate_outputs.py --model-size 1b             # standard 1B ablation
-    python src/generate_outputs.py --variant fast              # fast-bear 3B adapters
-    python src/generate_outputs.py --variant fast --model-size 1b  # fast-bear 1B
+    python src/generate_outputs.py --variant fast              # fast 3B adapters
+    python src/generate_outputs.py --variant fast --model-size 1b  # fast 1B
     python src/generate_outputs.py --base                      # base model, no adapter
     python src/generate_outputs.py --role age_5_11             # single role
 """

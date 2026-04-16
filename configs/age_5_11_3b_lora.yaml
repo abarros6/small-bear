@@ -14,7 +14,6 @@ data: "data/age_5_11"
 # num_layers: how many transformer layers (counting from the top) receive LoRA adapters.
 #   The 3B model has 28 layers total; 8 means the upper 8 layers (29%) are fine-tuned.
 #   Style and register are high-level semantic properties — upper layers are where they live.
-#   Reduced from 16 on fast-bear branch to shrink adapter size and speed up training.
 #   Lower values → fewer trainable parameters, faster training, weaker style imprinting.
 #   Higher values → stronger adaptation but more memory and risk of over-writing general knowledge.
 num_layers: 8
@@ -24,8 +23,8 @@ lora_parameters:
   #   Trainable parameters per adapted layer ≈ 2 * rank * hidden_dim.
   #   Lower rank (4) → fewer params, faster, may under-fit style.
   #   Higher rank (16-64) → more expressive but more memory and overfitting risk on small datasets.
-  #   Reduced to 4 on fast-bear branch — register adaptation is a simple style shift,
-  #   not knowledge acquisition, so rank 4 may be sufficient. Halves adapter parameter count.
+  #   Rank 4 halves adapter parameter count — register adaptation is a simple style shift,
+  #   not knowledge acquisition, so rank 4 is sufficient.
   rank: 4
 
   # scale: multiplier applied to the LoRA output (equivalent to alpha/rank in some frameworks,

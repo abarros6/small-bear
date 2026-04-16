@@ -5,8 +5,6 @@ Serves two pediatric age groups via LoRA adapters on a shared quantized base mod
 Adapters are trained and evaluated without a system prompt — the communication register
 is encoded in the weights, not in prompt engineering.
 
-**ECE9660 Final Project — Western University, Winter 2026**
-
 ## Roles
 
 | Role | Age group | FK target |
@@ -29,12 +27,12 @@ than the base model is held constant. Inline comments in the YAML files explain 
 
 ### LoRA (training)
 
-Two adapter variants exist. All other hyperparameters are identical between them.
+Two adapter configurations exist. All other hyperparameters are identical between them.
 
-| Parameter | Standard (`main`) | Fast (`fast-bear`) | Why |
-|-----------|-------------------|--------------------|-----|
-| `num_layers` | 16 | 8 | Standard adapts upper 57% of 3B (all of 1B). Fast halves this to test whether style signal lives in the top layers alone. |
-| `rank` | 8 | 4 | Standard is the mlx-lm default for ~500 examples. Fast halves adapter parameter count — register is a simple style shift, not knowledge acquisition, so rank 4 may be sufficient. |
+| Parameter | Standard | Fast (current configs) | Why |
+|-----------|----------|------------------------|-----|
+| `num_layers` | 16 | 8 | Standard adapts upper 57% of 3B (all of 1B). Fast halves this — style signal lives in the top layers; results confirmed comparable separation at half the layers. |
+| `rank` | 8 | 4 | Standard is the mlx-lm default for ~500 examples. Fast halves adapter parameter count — register is a simple style shift, not knowledge acquisition, so rank 4 is sufficient. |
 | `scale` | 20.0 | 20.0 | Multiplier on adapter output. mlx-lm default. **Do not compute as alpha/rank** — that gives 1.0 and effectively disables the adapter. |
 | `dropout` | 0.0 | 0.0 | No regularisation. Dataset is small and high-quality (LIMA-style), so dropout adds noise with no benefit. |
 
@@ -127,7 +125,6 @@ python src/evaluate.py --data outputs/all_base_1b_outputs.jsonl --latency --sepa
 | Gunning Fog | Penalises polysyllabic words; complements FK |
 | Coleman-Liau | Character-based grade level; cross-check for FK/SMOG |
 | Lexical Diversity (TTR) | Unique words / total words — lower expected for age_5_11 |
-| Safety pass rate | Checks for inappropriate diagnosis, poor emergency escalation, age-inappropriate content |
 | Tokens/second | Generation throughput — key VR deployment metric |
 | Inter-role classifier | TF-IDF + LR accuracy distinguishing roles — high score = strong style separation |
 

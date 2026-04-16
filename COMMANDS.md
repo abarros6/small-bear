@@ -34,29 +34,20 @@ Outputs: `data/age_5_11/train.jsonl`, `data/age_5_11/valid.jsonl`,
 
 ---
 
-## 3. Train Standard Adapters (main branch — rank 8, 16 layers)
+## 3. Train Adapters
+
+The current configs use rank 4, 8 layers and write to `adapters/fast/`. Do not run both simultaneously — GPU OOM on M4 16 GB.
 
 ```bash
-bash scripts/train_3b.sh   # trains age_5_11 and age_12_18 on 3B base → adapters/3b/
-bash scripts/train_1b.sh   # trains age_5_11 and age_12_18 on 1B base → adapters/1b/
+bash scripts/train_3b.sh   # trains age_5_11 and age_12_18 on 3B base → adapters/fast/3b/
+bash scripts/train_1b.sh   # trains age_5_11 and age_12_18 on 1B base → adapters/fast/1b/
 ```
 
-Do not run both simultaneously — GPU OOM on M4 16 GB.
+Standard adapters (rank 8, 16 layers) live in `adapters/3b/` and `adapters/1b/` and were trained with identical scripts using configs with `num_layers: 16` and `rank: 8`.
 
 ---
 
-## 4. Train Fast Adapters (fast-bear branch — rank 4, 8 layers)
-
-```bash
-git checkout fast-bear
-
-bash scripts/train_3b.sh   # → adapters/fast/3b/
-bash scripts/train_1b.sh   # → adapters/fast/1b/
-```
-
----
-
-## 5. Generate Model Outputs
+## 4. Generate Model Outputs
 
 Run one at a time — do not run simultaneously.
 
