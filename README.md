@@ -12,6 +12,21 @@ is encoded in the weights, not in prompt engineering.
 | `age_5_11` | Ages 5–11 | ≤ 7.0 |
 | `age_12_18` | Ages 12–18 | measured, no ceiling |
 
+## Paper & Findings
+
+The full write-up is at `paper/Paper.tex`. Two adapter configurations were trained across two
+model sizes (8 runs total): **Standard** (`rank=8`, `num_layers=16`) and **Fast**
+(`rank=4`, `num_layers=8`).
+
+Headline result: a **configuration-ordering crossover** — Standard wins on 3B, Fast wins on 1B,
+consistent across all five readability metrics and the inter-role classifier. Mechanism is
+unresolved (rank and layer count co-vary). **Fast-1B is the deployment recommendation**: the
+only configuration meeting the 1.0 s real-time latency target for the 5–11 adapter (0.93 s avg)
+while topping the inter-role classifier (0.940 accuracy).
+
+See `docs/EXPERIMENTS.md` for the planned follow-up to identify the crossover mechanism and test
+whether it generalizes to other model families.
+
 ## Stack
 
 - Base model (primary): `mlx-community/Llama-3.2-3B-Instruct-4bit`
@@ -70,7 +85,10 @@ bash scripts/setup.sh
 # Drop source JSONL files into data/source/, then:
 python src/prepare_data.py
 
-# Train standard adapters (3B primary, then 1B ablation):
+# Train Fast adapters (current configs: rank=4, num_layers=8 → adapters/fast/{size}/):
+# 3B primary first, then 1B ablation. Do not run simultaneously — GPU OOM on M4 16 GB.
+# To train Standard adapters (rank=8, num_layers=16 → adapters/{size}/), edit the YAMLs
+# and re-run; see CLAUDE.md "Hyperparameters & Inference Settings".
 bash scripts/train_3b.sh
 bash scripts/train_1b.sh
 
@@ -90,7 +108,7 @@ python src/inference.py --role age_5_11 --query "Will the X-ray hurt?" \
     --system-prompt "You are Dr. Beary Good at Victoria Hospital."
 ```
 
-See `COMMANDS.md` for the full reproduction sequence from clone to evaluated results.
+See `docs/COMMANDS.md` for the full reproduction sequence from clone to evaluated results.
 
 ## Evaluation
 

@@ -19,6 +19,18 @@ between two LoRA adapters trained on a purpose-built dataset. An ablation study 
 4. **1B vs. 3B Ablation** — Same training pipeline, same dataset, two base models. Compares
    latency vs. style quality tradeoff for VR real-time usage.
 
+## Paper
+
+The full write-up of this work is at `paper/Paper.tex` (IEEEtai format). It is the canonical
+reference for results, methodology rationale, and the limitations that drive forward work.
+
+Headline empirical finding from the paper: a **configuration-ordering crossover** —
+Standard ($r=8$, 16 layers) outperforms Fast on 3B; Fast ($r=4$, 8 layers) outperforms Standard
+on 1B. The reversal is consistent across all five readability metrics and the inter-role
+classifier. The mechanism is unresolved because rank and `num_layers` co-vary across the two
+configurations. See `docs/EXPERIMENTS.md` for the planned follow-up to identify which factor drives
+the crossover.
+
 ## Hardware & Stack
 
 | Component | Detail |
@@ -38,8 +50,13 @@ small-bear/
 ├── .gitignore
 ├── CLAUDE.md                               # This file
 ├── README.md                               # GitHub-facing docs
-├── COMMANDS.md                             # Full reproduction sequence from clone to results
 ├── requirements.txt                        # Pinned to known working versions
+├── docs/
+│   ├── COMMANDS.md                         # Full reproduction sequence from clone to results
+│   ├── EXPERIMENTS.md                      # Forward research roadmap (crossover ablation, etc.)
+│   └── dataset_creation_prompts.md         # exact prompts used to generate the synthetic dataset
+├── paper/
+│   └── Paper.tex                           # IEEEtai write-up — canonical results & rationale
 ├── configs/
 │   ├── age_5_11_3b_lora.yaml              # rank 4, 8 layers → adapters/fast/3b/
 │   ├── age_12_18_3b_lora.yaml
@@ -66,7 +83,7 @@ small-bear/
 │           ├── age_5_11/
 │           └── age_12_18/
 ├── outputs/                                # .gitignored — model-generated responses
-├── results/                                # .gitignored — evaluation reports
+├── results/                                # tracked — evaluation reports (committed for reproducibility)
 ├── logs/                                   # .gitignored — training logs
 ├── scripts/
 │   ├── setup.sh                            # mkdir -p all required directories
@@ -344,6 +361,12 @@ cat data/source/train/*.jsonl > /tmp/all_train.jsonl
 python src/evaluate.py --data /tmp/all_train.jsonl
 
 # Generate model outputs — run one at a time (GPU OOM if concurrent)
+# Naming convention written by generate_outputs.py:
+#   per-role:   <variant>_<role>_<size>_outputs.jsonl
+#   aggregate:  all_<variant>_<size>_outputs.jsonl
+# Where <variant> is "fast" (--variant fast), "base" (--base), or absent for Standard.
+# Example: standard 3B age 5-11 → outputs/age_5_11_3b_outputs.jsonl
+#          fast 1B aggregate    → outputs/all_fast_1b_outputs.jsonl
 python src/generate_outputs.py                              # standard 3B
 python src/generate_outputs.py --model-size 1b             # standard 1B
 python src/generate_outputs.py --variant fast              # fast 3B
@@ -431,7 +454,8 @@ scikit-learn    >=1.4.0   (inter-role style separation classifier in evaluate.py
 
 ## Ablation Study: 3B vs. 1B vs. Standard vs. Fast
 
-All four adapter variants have been trained and evaluated. Results live in `results/`.
+All four adapter variants have been trained and evaluated. Results live in `results/`. Full
+numbers and the inter-role classifier setup are in `paper/Paper.tex` §5.
 
 | Variant | Base model | Adapter paths |
 |---------|------------|---------------|
@@ -440,15 +464,53 @@ All four adapter variants have been trained and evaluated. Results live in `resu
 | Fast 3B | Llama-3.2-3B-Instruct-4bit | adapters/fast/3b/{role}/ |
 | Fast 1B | Llama-3.2-1B-Instruct-4bit | adapters/fast/1b/{role}/ |
 
-**Key findings from evaluation:**
-- Fast 3B is *slower* than Standard 3B despite fewer adapter parameters — rank/layer reduction
-  changed output length behaviour (120 vs 92 tokens avg). Tokens/sec is comparable; more tokens
-  generated explains the latency increase.
-- Fast 1B is the deployment recommendation: 70% of responses under 1s target, highest
-  inter-role classifier accuracy (0.940), competitive FK pass rate.
-- Evaluation metrics: FK grade, latency, tokens/sec, inter-role classifier accuracy.
+**Headline metrics (5–11 group; full tables in `paper/Paper.tex` §5):**
 
-**Why Llama 1B (not Qwen or other small models):**
+| Variant     | FK ≤ 7.0 pass | Avg latency | Classifier acc. |
+|-------------|---------------|-------------|-----------------|
+| Standard-3B | 84%           | 2.37 s      | 0.920           |
+| Standard-1B | 72%           | 1.09 s      | 0.890           |
+| Fast-3B     | 76%           | 2.83 s      | 0.900           |
+| Fast-1B     | **82%**       | **0.93 s**  | **0.940**       |
+| Base-3B     | 12%           | 3.99 s      | 0.700           |
+| Base-1B     | 14%           | 2.01 s      | 0.660           |
+
+**Key findings:**
+- **Configuration-ordering crossover**: Standard wins on 3B; Fast wins on 1B. Consistent across
+  all five readability metrics and the inter-role classifier. Mechanism unresolved (see
+  Known Gaps below).
+- **Fast-1B is the deployment recommendation**: only configuration meeting the 1.0s real-time
+  latency target for the 5–11 adapter (0.93s avg, 70% under target) while topping the
+  classifier and clearing the FK ≤ 7.0 bar.
+- **Fast-3B is slower than Standard-3B** despite fewer adapter parameters — rank/layer reduction
+  changed output length behaviour (120 vs 92 avg tokens). Tokens/sec is comparable; longer
+  responses explain the latency increase.
+
+**Why Llama 1B (not Qwen or other small models) for the original ablation:**
 Same family as the 3B base — same tokenizer, same chat template, same `apply_chat_template`
-behaviour. Drop-in replacement. Other small models require revalidating the entire data pipeline.
+behaviour. Drop-in replacement. Other small models require revalidating the data pipeline.
+Forward work in `docs/EXPERIMENTS.md` §2 plans a Qwen 2.5 sweep specifically to test whether the
+crossover is Llama-specific.
+
+### Known Gaps (paper Limitations §)
+
+These motivate the experiments in `docs/EXPERIMENTS.md`:
+
+- **Confounded comparison.** Standard and Fast differ in both `rank` AND `num_layers`. The
+  crossover cannot be attributed to either factor in isolation without a controlled sweep
+  varying one at a time. (`docs/EXPERIMENTS.md` §1.)
+- **Single-seed runs.** All eight runs use seed 42. No variance estimates for any reported
+  metric — whether the crossover is stable or a seed artifact is unknown.
+- **Standard adapter perplexity not collected.** Only Fast-adapter perplexity appears in the
+  paper (Table 1). Filling this requires a val-loss-only pass on the existing Standard
+  checkpoints. (`docs/EXPERIMENTS.md` §3.)
+- **Single model family.** Only Llama 3.2 1B and 3B were tested. Whether the crossover
+  generalizes to Qwen, Gemma, or smaller scales is open. (`docs/EXPERIMENTS.md` §2.)
+
+### Forward Roadmap
+
+See `docs/EXPERIMENTS.md` for the prioritized, time-bounded plan: controlled rank/layer ablation
+to identify the crossover mechanism, a Qwen 2.5 family sweep, a SmolLM2 stretch probe, quick
+wins like the missing Standard perplexity, and TODO items (human eval, safety eval, dataset
+quality pass).
 

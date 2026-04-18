@@ -67,7 +67,7 @@ python src/generate_outputs.py --base --model-size 1b   # → outputs/all_base_1
 
 ---
 
-## 6. Evaluate
+## 5. Evaluate
 
 Evaluation is CPU-only and can be run back to back.
 
@@ -89,7 +89,7 @@ Results are saved to `results/` and printed to stdout.
 
 ---
 
-## 7. Quick Inference Checks (optional)
+## 6. Quick Inference Checks (optional)
 
 ```bash
 # Standard adapter
