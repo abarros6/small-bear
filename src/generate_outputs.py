@@ -101,7 +101,7 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
 def main():
     parser = argparse.ArgumentParser(description="Generate model outputs for evaluation")
     parser.add_argument("--role", choices=ROLES, help="Single role (default: all roles)")
-    parser.add_argument("--model-size", choices=["3b", "1b"], default="3b",
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard"], default="3b",
                         help="Base model size (default: 3b)")
     parser.add_argument("--max-tokens", type=int, default=300)
     parser.add_argument("--variant", default="",

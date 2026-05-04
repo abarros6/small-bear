@@ -40,7 +40,16 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from constants import BASE_MODEL_3B, BASE_MODEL_1B, ROLES
+from constants import BASE_MODEL_3B, BASE_MODEL_1B, BASE_MODEL_QWEN, BASE_MODEL_QWEN4BIT, ROLES
+
+_BASE_MODEL = {
+    "3b":          BASE_MODEL_3B,
+    "1b":          BASE_MODEL_1B,
+    "qwen":        BASE_MODEL_QWEN,
+    "qwen4bit":    BASE_MODEL_QWEN4BIT,
+    "qwen_standard":    BASE_MODEL_QWEN,
+    "qwen4bit_standard": BASE_MODEL_QWEN4BIT,
+}
 
 ADAPTER_DIR = Path("adapters")
 
@@ -50,7 +59,7 @@ def load_model(role: str, model_size: str = "3b", use_base: bool = False, varian
 
     Args:
         role: One of the values in ROLES.
-        model_size: '3b' or '1b' — selects base model for ablation study.
+        model_size: '3b', '1b', 'qwen', or 'qwen4bit' — selects base model.
         use_base: Load the raw base model with no adapter (for comparison).
         variant: Adapter subdirectory prefix, e.g. 'fast' → adapters/fast/{size}/{role}.
                  Empty string (default) → adapters/{size}/{role}.
@@ -60,7 +69,7 @@ def load_model(role: str, model_size: str = "3b", use_base: bool = False, varian
     """
     from mlx_lm import load
 
-    base_model = BASE_MODEL_3B if model_size == "3b" else BASE_MODEL_1B
+    base_model = _BASE_MODEL[model_size]
 
     if use_base:
         print(f"Loading base model (no adapter): {base_model}", file=sys.stderr)
@@ -81,7 +90,11 @@ def generate_response(
     tokenizer,
     query: str,
     system_prompt: str | None = None,
-    max_tokens: int = 300,
+    max_tokens: int = 200,
+    temp: float = 0.0,
+    top_p: float = 1.0,
+    top_k: int = 0,
+    repetition_penalty: float = 1.2,
 ) -> tuple:
     """Generate a response for the given query.
 
@@ -114,10 +127,10 @@ def generate_response(
         Restricts sampling to the K most probable tokens at each step.
         0 = disabled. Again irrelevant at temp=0.0.
 
-    repetition_penalty : 1.0  (mlx-lm default — no penalty)
-        Divides logits of already-generated tokens by this factor to discourage repetition.
-        1.0 = no penalty. Values of 1.1–1.3 reduce looping responses. Useful if the model
-        starts repeating phrases — more likely at temp=0.0 on long outputs.
+    repetition_penalty : 1.2  (default set here — mlx-lm default is 1.0)
+        Multiplicative penalty applied to logits of already-generated tokens.
+        1.0 = no penalty. 1.1–1.3 reduces looping at temp=0.0. Applied over
+        the last 20 tokens via make_logits_processors().
 
     max_tokens   : 300  (set in argparse; ~200–250 words)
         Hard cap on generated tokens. Generation stops at this limit OR at the model's EOS token,
@@ -126,6 +139,7 @@ def generate_response(
         Decrease to enforce brevity or reduce latency.
     """
     from mlx_lm import generate
+    from mlx_lm.sample_utils import make_sampler, make_logits_processors
 
     messages = []
     if system_prompt:
@@ -138,14 +152,18 @@ def generate_response(
         add_generation_prompt=True,
     )
 
+    sampler = make_sampler(temp=temp, top_p=top_p, top_k=top_k)
+    logits_processors = make_logits_processors(repetition_penalty=repetition_penalty)
+
     t0 = time.perf_counter()
     response = generate(
         model,
         tokenizer,
         prompt=prompt,
-        max_tokens=max_tokens,  # see docstring — default 300 tokens
+        max_tokens=max_tokens,
         verbose=False,
-        # temperature, top_p, top_k, repetition_penalty are all mlx-lm defaults (see docstring)
+        sampler=sampler,
+        logits_processors=logits_processors,
     )
     latency = time.perf_counter() - t0
 
@@ -161,8 +179,8 @@ def main():
                         help="Load raw base model (no adapter) — for comparison")
     parser.add_argument("--role", "-r", choices=ROLES,
                         help=f"Role adapter to load: {' | '.join(ROLES)}")
-    parser.add_argument("--model-size", choices=["3b", "1b"], default="3b",
-                        help="Base model size for ablation: 3b (default) or 1b")
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard"], default="3b",
+                        help="Base model size: 3b (default), 1b, qwen, qwen4bit, qwen_standard, qwen4bit_standard")
     parser.add_argument("--system-prompt", "-s",
                         help="Optional system prompt (e.g. for VR deployment testing). "
                              "Omit to run without one — matching training conditions.")
@@ -175,6 +193,18 @@ def main():
                         help="Maximum tokens to generate (default: 300). "
                              "~300 tokens ≈ 200-250 words. Increase if responses are truncated; "
                              "decrease to reduce latency. EOS usually fires before this cap.")
+    parser.add_argument("--temp", type=float, default=0.0,
+                        help="Sampling temperature (default: 0.0 = greedy). "
+                             "0.3–0.5 adds variation; >1.0 is incoherent.")
+    parser.add_argument("--top-p", type=float, default=1.0,
+                        help="Nucleus sampling threshold (default: 1.0 = disabled). "
+                             "Only meaningful when --temp > 0.")
+    parser.add_argument("--top-k", type=int, default=0,
+                        help="Top-k sampling (default: 0 = disabled). "
+                             "Only meaningful when --temp > 0.")
+    parser.add_argument("--repetition-penalty", type=float, default=1.2,
+                        help="Repetition penalty applied to already-generated tokens (default: 1.2). "
+                             "1.0 = no penalty. 1.1–1.3 reduces looping at temp=0.0.")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Show latency after each response")
     parser.add_argument("--variant", default="",
@@ -213,6 +243,10 @@ def main():
                 model, tokenizer, query,
                 system_prompt=args.system_prompt,  # None by default
                 max_tokens=args.max_tokens,
+                temp=args.temp,
+                top_p=args.top_p,
+                top_k=args.top_k,
+                repetition_penalty=args.repetition_penalty,
             )
             latencies.append(latency)
             print(f"\n[{role}] Q: {query}")
@@ -250,6 +284,7 @@ def main():
                 model, tokenizer, query,
                 system_prompt=args.system_prompt,
                 max_tokens=args.max_tokens,
+                repetition_penalty=args.repetition_penalty,
             )
             print(f"\n{response}\n")
             if args.verbose:
@@ -262,6 +297,7 @@ def main():
             model, tokenizer, args.query,
             system_prompt=args.system_prompt,
             max_tokens=args.max_tokens,
+            repetition_penalty=args.repetition_penalty,
         )
         print(response)
         if args.verbose:
