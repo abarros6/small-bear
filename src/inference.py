@@ -54,7 +54,8 @@ _BASE_MODEL = {
 ADAPTER_DIR = Path("adapters")
 
 
-def load_model(role: str, model_size: str = "3b", use_base: bool = False, variant: str = ""):
+def load_model(role: str, model_size: str = "3b", use_base: bool = False, variant: str = "",
+               adapter_path_override: str = ""):
     """Load model and tokenizer.
 
     Args:
@@ -63,6 +64,8 @@ def load_model(role: str, model_size: str = "3b", use_base: bool = False, varian
         use_base: Load the raw base model with no adapter (for comparison).
         variant: Adapter subdirectory prefix, e.g. 'fast' → adapters/fast/{size}/{role}.
                  Empty string (default) → adapters/{size}/{role}.
+        adapter_path_override: Explicit path to an adapter directory, bypassing the
+                               default path construction. Used for sweep runs.
 
     Returns:
         (model, tokenizer)
@@ -75,7 +78,13 @@ def load_model(role: str, model_size: str = "3b", use_base: bool = False, varian
         print(f"Loading base model (no adapter): {base_model}", file=sys.stderr)
         return load(base_model)
 
-    adapter_path = ADAPTER_DIR / variant / model_size / role if variant else ADAPTER_DIR / model_size / role
+    if adapter_path_override:
+        adapter_path = Path(adapter_path_override)
+    elif variant:
+        adapter_path = ADAPTER_DIR / variant / model_size / role
+    else:
+        adapter_path = ADAPTER_DIR / model_size / role
+
     if not adapter_path.exists():
         print(f"Error: adapter not found at {adapter_path}", file=sys.stderr)
         print(f"  Train first: mlx_lm.lora --config configs/{role}_{model_size}_lora.yaml",
@@ -209,6 +218,9 @@ def main():
                         help="Show latency after each response")
     parser.add_argument("--variant", default="",
                         help="Adapter variant subdirectory, e.g. 'fast' → adapters/fast/{size}/{role}")
+    parser.add_argument("--adapter-path", default="",
+                        help="Explicit adapter directory path, overrides default path construction. "
+                             "Use for sweep runs: --adapter-path adapters/sweeps/rank4_layers8_seed42_1b_age_5_11")
 
     args = parser.parse_args()
 
@@ -237,7 +249,8 @@ def main():
         for query, role in benchmark_queries:
             key = f"{role}_{args.model_size}"
             if key not in models:
-                models[key] = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
+                models[key] = load_model(role, model_size=args.model_size, use_base=args.base,
+                                         variant=args.variant, adapter_path_override=args.adapter_path)
             model, tokenizer = models[key]
             response, latency = generate_response(
                 model, tokenizer, query,
@@ -267,7 +280,8 @@ def main():
         print(f"System prompt: {'none' if not args.system_prompt else repr(args.system_prompt[:60] + '...')}")
         print("Type a query and press Enter. Type 'quit' to exit.\n")
 
-        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base,
+                                      variant=args.variant, adapter_path_override=args.adapter_path)
 
         while True:
             try:
@@ -292,7 +306,8 @@ def main():
 
     elif args.query:
         role = args.role or ROLES[0]
-        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base, variant=args.variant)
+        model, tokenizer = load_model(role, model_size=args.model_size, use_base=args.base,
+                                      variant=args.variant, adapter_path_override=args.adapter_path)
         response, latency = generate_response(
             model, tokenizer, args.query,
             system_prompt=args.system_prompt,

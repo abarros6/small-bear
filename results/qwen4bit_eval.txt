@@ -10,40 +10,41 @@ Role: age_5_11 (50 examples)
 ----------------------------------------
 
   Reading Level:
-    FK grade      — avg: 4.7, min: -3.0, max: 12.3
-    SMOG          — avg: 7.5  (reliable only on long texts; 0 = too short)
-    Gunning Fog   — avg: 6.6
-    Coleman-Liau  — avg: 23.0
-    Lexical div.  — avg: 0.539  (TTR: 0=repetitive, 1=all unique words)
-    Avg word count: 98
-    FK <= 7.0 target: 48/50 pass (96.0%)
+    FK grade      — avg: 5.8, min: 1.9, max: 8.7
+    SMOG          — avg: 8.5  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.4
+    Coleman-Liau  — avg: 6.5
+    Lexical div.  — avg: 0.725  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 69
+    FK <= 7.0 target: 34/50 pass (68.0%)
     Worst offenders:
-      FK 12.3: 'My room number is B2-503. What does that mean?'
-      FK 8.9: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.7: 'A lady said she's a child life specialist. What does that me'
+      FK 8.6: 'My mom had to leave and I'm scared to be here alone.'
+      FK 8.3: 'What's a dietitian? Somebody called a dietitian came to talk'
 
   Latency (50 samples):
-    avg: 0.68s, min: 0.28s, max: 1.45s
-    Under 1.0s target: 39/50
-    Avg tokens/response: 131
-    Avg tokens/second:   184.7
+    avg: 0.46s, min: 0.25s, max: 1.51s
+    Under 1.0s target: 49/50
+    Avg tokens/response: 83
+    Avg tokens/second:   175.4
 
 ----------------------------------------
 Role: age_12_18 (50 examples)
 ----------------------------------------
 
   Reading Level:
-    FK grade      — avg: 8.8, min: 3.8, max: 76.2
-    SMOG          — avg: 10.5  (reliable only on long texts; 0 = too short)
-    Gunning Fog   — avg: 11.0
-    Coleman-Liau  — avg: 11.2
-    Lexical div.  — avg: 0.521  (TTR: 0=repetitive, 1=all unique words)
-    Avg word count: 109
+    FK grade      — avg: 9.4, min: 5.0, max: 13.0
+    SMOG          — avg: 11.7  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 11.5
+    Coleman-Liau  — avg: 9.6
+    Lexical div.  — avg: 0.644  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 103
 
   Latency (50 samples):
-    avg: 0.73s, min: 0.28s, max: 1.47s
-    Under 1.0s target: 41/50
-    Avg tokens/response: 140
-    Avg tokens/second:   187.6
+    avg: 0.67s, min: 0.41s, max: 1.47s
+    Under 1.0s target: 48/50
+    Avg tokens/response: 127
+    Avg tokens/second:   186.9
 
 ----------------------------------------
 Category Distribution
@@ -55,12 +56,12 @@ Category Distribution
 SUMMARY
 ============================================================
   Total examples: 100
-  age_5_11 FK <= 7.0: 48/50
+  age_5_11 FK <= 7.0: 34/50
 
 
 ----------------------------------------
 Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
 ----------------------------------------
   Examples: {'age_5_11': 50, 'age_12_18': 50}
-  Accuracy: 0.860 ± 0.092
+  Accuracy: 0.960 ± 0.058
   ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation

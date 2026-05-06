@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank4_layers8_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.4, min: 3.6, max: 9.1
+    SMOG          — avg: 9.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.1
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.782  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 73
+    FK <= 7.0 target: 33/50 pass (66.0%)
+    Worst offenders:
+      FK 9.1: 'Why do the nurses keep waking me up at night?'
+      FK 8.9: 'What does the person with the guitar do?'
+      FK 8.8: 'Who is the person who keeps coming to check my arm where the'
+
+  Latency (50 samples):
+    avg: 0.89s, min: 0.49s, max: 1.57s
+    Under 1.0s target: 38/50
+    Avg tokens/response: 88
+    Avg tokens/second:   97.7
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 33/50
+

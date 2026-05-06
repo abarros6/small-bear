@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed1337_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.5, min: 1.2, max: 10.7
+    SMOG          — avg: 9.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.2
+    Coleman-Liau  — avg: 7.2
+    Lexical div.  — avg: 0.731  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 85
+    FK <= 7.0 target: 34/50 pass (68.0%)
+    Worst offenders:
+      FK 10.7: 'Why do the nurses keep waking me up at night?'
+      FK 9.4: 'There's a clown walking around. Is this a real hospital?'
+      FK 9.2: 'Why does someone keep coming to check on me when I'm sleepin'
+
+  Latency (50 samples):
+    avg: 2.54s, min: 1.12s, max: 7.15s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 101
+    Avg tokens/second:   39.4
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 34/50
+

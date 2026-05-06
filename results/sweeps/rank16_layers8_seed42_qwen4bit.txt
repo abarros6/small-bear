@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed42_qwen4bit_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.2, min: 1.3, max: 11.5
+    SMOG          — avg: 8.7  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.7
+    Coleman-Liau  — avg: 10.2
+    Lexical div.  — avg: 0.746  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 70
+    FK <= 7.0 target: 35/50 pass (70.0%)
+    Worst offenders:
+      FK 11.5: 'Why do I have to wear this bracelet on my arm?'
+      FK 11.5: 'Why do I have to wear this bracelet on my arm?'
+      FK 10.8: 'Can I watch TV?'
+
+  Latency (50 samples):
+    avg: 0.48s, min: 0.25s, max: 0.71s
+    Under 1.0s target: 50/50
+    Avg tokens/response: 86
+    Avg tokens/second:   178.5
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 35/50
+

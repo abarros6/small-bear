@@ -17,10 +17,10 @@ Target: FK grade ≤ 7.0. VR real-time latency target: < 1.0 s.
 | Standard-1B            | 6.1    | 36/50 72% | 8.8  | 7.7  | 6.7     | 0.712   | 74        | 1.09 s  | 21/50 42%  | 89      | 81.7  |
 | Fast-3B                | 5.9    | 38/50 76% | 8.9  | 7.9  | 6.6     | 0.636   | 99        | 2.83 s  |  0/50  0%  | 120     | 41.9  |
 | Fast-1B                | 5.5    | 41/50 82% | 8.4  | 7.2  | 6.2     | 0.701   | 72        | 0.93 s  | 35/50 70%  | 88      | 94.3  |
-| Qwen Standard (BF16)   | 5.8    | 42/50 84% | 8.4  | 7.5  | 6.5     | 0.689   | 75        | 0.58 s  | 50/50 100% | 90      | 153.5 |
-| Qwen Standard (4-bit)  | 5.8    | 42/50 84% | 8.4  | 7.5  | 6.5     | 0.689   | 75        | 0.58 s  | 50/50 100% | 90      | 152.8 |
-| Qwen Fast (BF16)       | 4.7    | 48/50 96% | 7.5  | 6.6  | 23.0 ⚠  | 0.539   | 98        | 0.70 s  | 39/50 78%  | 131     | 177.5 |
-| Qwen Fast (4-bit)      | 4.7    | 48/50 96% | 7.5  | 6.6  | 23.0 ⚠  | 0.539   | 98        | 0.68 s  | 39/50 78%  | 131     | 184.7 |
+| Qwen Standard (BF16)   | 6.2    | 37/50 74% | 9.0  | 7.9  | 7.1     | 0.760   | 73        | 0.59 s  | 50/50 100% | 88      | 148.6 |
+| Qwen Standard (4-bit)  | 6.2    | 37/50 74% | 9.0  | 7.9  | 7.1     | 0.760   | 73        | 0.59 s  | 50/50 100% | 88      | 150.6 |
+| Qwen Fast (BF16)       | 5.8    | 34/50 68% | 8.5  | 7.4  | 6.5     | 0.725   | 69        | 0.46 s  | 49/50 98%  | 83      | 175.8 |
+| Qwen Fast (4-bit)      | 5.8    | 34/50 68% | 8.5  | 7.4  | 6.5     | 0.725   | 69        | 0.46 s  | 49/50 98%  | 83      | 175.4 |
 | Base-3B (no LoRA)      | 9.4    |  6/50 12% | 12.1 | 12.2 | 9.6     | 0.609   | 152       | 3.99 s  |  3/50  6%  | 190     | 46.5  |
 | Base-1B (no LoRA)      | 9.5    |  7/50 14% | 12.1 | 12.2 | 9.0     | 0.508   | 201       | 2.01 s  |  2/50  4%  | 247     | 122.3 |
 
@@ -36,10 +36,10 @@ No FK ceiling for this role — lower is more readable but not penalised.
 | Standard-1B            | 8.8    | 11.7 | 11.3 | 10.3    | 0.701   | 90        | 1.36 s  |  3/50  6%  | 114     | 83.7  |
 | Fast-3B                | 8.3    | 11.2 | 10.7 | 9.7     | 0.613   | 122       | 3.63 s  |  1/50  2%  | 153     | 41.7  |
 | Fast-1B                | 8.4    | 11.3 | 10.6 | 9.4     | 0.650   | 92        | 1.20 s  | 12/50 24%  | 115     | 95.4  |
-| Qwen Standard (BF16)   | 8.2    | 11.1 | 10.6 | 10.0    | 0.667   | 84        | 0.69 s  | 49/50 98%  | 108     | 155.7 |
-| Qwen Standard (4-bit)  | 8.2    | 11.1 | 10.6 | 10.0    | 0.667   | 84        | 0.69 s  | 49/50 98%  | 108     | 155.3 |
-| Qwen Fast (BF16)       | 8.8    | 10.5 | 11.0 | 11.2    | 0.521   | 109       | 0.73 s  | 41/50 82%  | 140     | 186.9 |
-| Qwen Fast (4-bit)      | 8.8    | 10.5 | 11.0 | 11.2    | 0.521   | 109       | 0.73 s  | 41/50 82%  | 140     | 187.6 |
+| Qwen Standard (BF16)   | 9.8    | 12.0 | 12.0 | 10.4    | 0.743   | 90        | 0.75 s  | 47/50 94%  | 114     | 151.2 |
+| Qwen Standard (4-bit)  | 9.8    | 12.0 | 12.0 | 10.4    | 0.743   | 90        | 0.74 s  | 48/50 96%  | 114     | 154.3 |
+| Qwen Fast (BF16)       | 9.4    | 11.7 | 11.5 | 9.6     | 0.644   | 103       | 0.67 s  | 48/50 96%  | 127     | 186.6 |
+| Qwen Fast (4-bit)      | 9.4    | 11.7 | 11.5 | 9.6     | 0.644   | 103       | 0.67 s  | 48/50 96%  | 127     | 186.9 |
 | Base-3B (no LoRA)      | 10.6   | 12.9 | 13.3 | 11.4    | 0.565   | 206       | 5.39 s  |  1/50  2%  | 264     | 48.7  |
 | Base-1B (no LoRA)      | 10.8   | 13.1 | 13.4 | 11.2    | 0.527   | 210       | 2.14 s  |  4/50  8%  | 265     | 121.8 |
 
@@ -49,18 +49,18 @@ No FK ceiling for this role — lower is more readable but not penalised.
 
 TF-IDF + logistic regression, 5-fold CV. ~0.50 = chance; ≥ 0.90 = strong register separation.
 
-| Variant               | Accuracy | Std dev |
-|-----------------------|----------|---------|
-| Fast-1B               | **0.940**| ± 0.073 |
-| Standard-3B           | 0.920    | ± 0.051 |
-| Qwen Standard (BF16)  | 0.920    | ± 0.093 |
-| Qwen Standard (4-bit) | 0.920    | ± 0.093 |
-| Fast-3B               | 0.900    | ± 0.077 |
-| Standard-1B           | 0.890    | ± 0.102 |
-| Qwen Fast (BF16)      | 0.860    | ± 0.092 |
-| Qwen Fast (4-bit)     | 0.860    | ± 0.092 |
-| Base-3B               | 0.700    | ± 0.063 |
-| Base-1B               | 0.660    | ± 0.097 |
+| Variant               | Accuracy  | Std dev |
+|-----------------------|-----------|---------|
+| Qwen Fast (BF16)      | **0.960** | ± 0.058 |
+| Qwen Fast (4-bit)     | **0.960** | ± 0.058 |
+| Fast-1B               | 0.940     | ± 0.073 |
+| Qwen Standard (BF16)  | 0.940     | ± 0.049 |
+| Qwen Standard (4-bit) | 0.940     | ± 0.049 |
+| Standard-3B           | 0.920     | ± 0.051 |
+| Fast-3B               | 0.900     | ± 0.077 |
+| Standard-1B           | 0.890     | ± 0.102 |
+| Base-3B               | 0.700     | ± 0.063 |
+| Base-1B               | 0.660     | ± 0.097 |
 
 ---
 
@@ -74,7 +74,7 @@ The central research question — does the configuration-ordering crossover exte
 |--------------|----------|--------|----------|
 | Llama 3B     | **84%**  | 76%    | Standard |
 | Llama 1B     | 72%      | **82%**| Fast     |
-| Qwen 0.5B    | 84%      | **96%**| Fast ⚠  |
+| Qwen 0.5B    | **74%**  | 68%    | Standard |
 
 ### Inter-Role Classifier Accuracy
 
@@ -82,7 +82,7 @@ The central research question — does the configuration-ordering crossover exte
 |--------------|-----------|-----------|----------|
 | Llama 3B     | **0.920** | 0.900     | Standard |
 | Llama 1B     | 0.890     | **0.940** | Fast     |
-| Qwen 0.5B    | **0.920** | 0.860     | Standard |
+| Qwen 0.5B    | 0.940     | **0.960** | Fast     |
 
 ### Interpretation
 
@@ -90,17 +90,13 @@ The Llama crossover is fully confirmed: Standard beats Fast on 3B across both me
 Fast beats Standard on 1B across both metrics.
 
 Qwen 0.5B gives a **split result** depending on the metric:
-- FK pass rate favours Fast (96% vs 84%) — consistent with the 1B pattern and the hypothesis
-  that smaller models benefit more from the fast config.
-- Classifier accuracy favours Standard (0.920 vs 0.860) — consistent with the 3B pattern
-  and opposite to what model size would predict.
+- FK pass rate favours Standard (74% vs 68%) — consistent with the 3B pattern.
+- Classifier accuracy favours Fast (0.960 vs 0.940) — consistent with the 1B pattern.
 
-The split is likely explained by the metric anomalies in Qwen Fast outputs (Coleman-Liau 23.0,
-FK min −3.0, FK max 76.2 — see Observations below). Qwen Fast appears to generate some
-responses that are unusually short or poorly formatted, which artificially deflates FK grades
-and inflates the pass rate. Qwen Standard produces clean metric values across the board,
-suggesting the standard config is the more reliable Qwen adapter. **The FK advantage of Qwen
-Fast should not be taken at face value without manual inspection of the outlier responses.**
+Neither metric shows anomalies in the re-run (Coleman-Liau is 6.5/7.1, FK ranges are
+normal). The split is genuine rather than an artifact. Whether Qwen 0.5B capacity
+aligns more with the 1B or 3B regime depends on which metric you weight — the crossover
+mechanism remains unresolved (see Observations below).
 
 ---
 
@@ -108,10 +104,10 @@ Fast should not be taken at face value without manual inspection of the outlier 
 
 | Variant               | 5–11 avg lat | 5–11 < 1 s | 12–18 avg lat | 12–18 < 1 s | 5–11 TPS | 12–18 TPS |
 |-----------------------|-------------|------------|--------------|------------|----------|-----------|
-| Qwen Standard (BF16)  | **0.58 s**  | **100%**   | **0.69 s**   | **98%**    | 153.5    | 155.7     |
-| Qwen Standard (4-bit) | **0.58 s**  | **100%**   | **0.69 s**   | **98%**    | 152.8    | 155.3     |
-| Qwen Fast (BF16)      | 0.70 s      | 78%        | 0.73 s       | 82%        | 177.5    | 186.9     |
-| Qwen Fast (4-bit)     | 0.68 s      | 78%        | 0.73 s       | 82%        | 184.7    | 187.6     |
+| Qwen Fast (BF16)      | **0.46 s**  | 98%        | **0.67 s**   | 96%        | 175.8    | 186.6     |
+| Qwen Fast (4-bit)     | **0.46 s**  | 98%        | **0.67 s**   | 96%        | 175.4    | 186.9     |
+| Qwen Standard (BF16)  | 0.59 s      | **100%**   | 0.75 s       | 94%        | 148.6    | 151.2     |
+| Qwen Standard (4-bit) | 0.59 s      | **100%**   | 0.74 s       | **96%**    | 150.6    | 154.3     |
 | Fast-1B               | 0.93 s      | 70%        | 1.20 s       | 24%        | 94.3     | 95.4      |
 | Standard-1B           | 1.09 s      | 42%        | 1.36 s       | 6%         | 81.7     | 83.7      |
 | Standard-3B           | 2.37 s      | 0%         | 2.94 s       | 0%         | 38.8     | 39.3      |
@@ -119,11 +115,10 @@ Fast should not be taken at face value without manual inspection of the outlier 
 | Base-1B               | 2.01 s      | 4%         | 2.14 s       | 8%         | 122.3    | 121.8     |
 | Base-3B               | 3.99 s      | 6%         | 5.39 s       | 2%         | 46.5     | 48.7      |
 
-**Qwen Standard is the fastest adapter overall**, clearing the 1.0 s VR target on every single
-age_5_11 response (50/50) and 98% of age_12_18 responses — despite having higher rank and more
-adapted layers than Qwen Fast. The reason: Standard produces shorter responses (75 vs 98 avg
-words), so even with lower TPS it finishes sooner. The same token-length effect was observed
-with Fast-3B being slower than Standard-3B.
+**Qwen Fast is the lowest-latency adapter overall** (0.46 s avg for age_5_11, 0.67 s for
+age_12_18). Qwen Standard has slightly higher latency but clears the 1.0 s target on every
+single age_5_11 response (50/50) vs 49/50 for Qwen Fast — effectively a tie in practice.
+Both Qwen adapters are roughly 2× faster than Fast-1B on the age_5_11 role.
 
 ---
 
@@ -136,37 +131,33 @@ between BF16 and 4-bit variants in both the fast and standard configurations. TP
 The 4-bit variant is the practical choice (smaller on disk, marginally faster) but results
 are interchangeable.
 
-### 2. Qwen Fast has metric anomalies; Qwen Standard does not
-Qwen Fast outputs show three abnormal values absent from all other variants:
-- **Coleman-Liau avg 23.0** (normal range: 0–20) — indicates sentence segmentation failure,
-  likely from Qwen Fast using bullet lists or non-prose formatting.
-- **FK min −3.0** — at least one response is trivially short or non-prose.
-- **FK max 76.2 (age 12–18)** — a clear degenerate response.
+### 2. Metric anomalies from the previous run are gone
+The prior run showed Qwen Fast anomalies (Coleman-Liau avg 23.0, FK min −3.0, FK max 76.2).
+The re-run shows clean values across both configs: Coleman-Liau 6.5 / 9.6, FK ranges
+2.2–9.2 / 2.7–13.1 — all within normal bounds. Both Qwen adapters now produce well-formed
+prose with no degenerate responses.
 
-Qwen Standard shows none of these: Coleman-Liau 6.5 / 10.0, FK min 2.4 / 4.3,
-FK max 9.2 / 12.4 — all within expected ranges. The standard config (more parameters,
-more layers) appears to produce more stable, well-formed prose from this model.
-
-### 3. Qwen Standard is a strong all-around performer
-Qwen Standard (BF16 or 4-bit) matches Standard-3B on FK pass rate (84%) and classifier
-accuracy (0.920), while being 4× faster (0.58 s vs 2.37 s avg) and clearing the 1.0 s
-target 100% of the time. It also matches Llama metrics without any anomalies. For a 0.5B
-model, this is a strong result.
+### 3. Qwen Fast has the highest classifier accuracy of all variants (0.960)
+Qwen Fast achieves stronger inter-role style separation than any Llama adapter, including
+Fast-1B (0.960 vs 0.940). Qwen Standard matches Fast-1B (0.940). On FK pass rate, Qwen
+Standard edges Qwen Fast (74% vs 68%), but both fall below the best Llama results (Standard-3B
+84%, Fast-1B 82%). The latency advantage is substantial: Qwen Fast is 2× faster than Fast-1B.
 
 ### 4. The Llama crossover mechanism remains unresolved
 Adding Qwen does not clarify whether rank or num_layers drives the crossover, since both
-co-vary between Standard and Fast configs. The Qwen result muddies the picture further:
-the metric that tracks the crossover (FK or classifier) determines whether Qwen 0.5B
-looks like a 1B (Fast wins) or a 3B (Standard wins). See `docs/EXPERIMENTS.md` §1 for
+co-vary between Standard and Fast configs. Qwen 0.5B gives a split result: FK pass rate
+favours Standard (like 3B), classifier favours Fast (like 1B). Whether 0.5B behaves more
+like a "small" or "large" model depends on the metric. See `docs/EXPERIMENTS.md` §1 for
 the controlled single-variable ablation needed to resolve this.
 
 ---
 
 ## Recommended Configuration by Use Case
 
-| Priority             | Recommended variant      | Reason                                                        |
-|----------------------|--------------------------|---------------------------------------------------------------|
-| VR real-time         | **Qwen Standard (4-bit)**| 100%/98% under 1 s; clean metrics; matches 3B quality at 0.5B|
-| Proven Llama quality | **Fast-1B**              | Best Llama classifier (0.940); 70% under 1 s on age 5–11     |
-| Quality ceiling      | **Standard-3B**          | Highest readability consistency; most stable metrics          |
-| Research baseline    | Base-3B / Base-1B        | Establishes the no-adapter floor                              |
+| Priority                   | Recommended variant      | Reason                                                               |
+|----------------------------|--------------------------|----------------------------------------------------------------------|
+| VR real-time (lowest avg)  | **Qwen Fast (4-bit)**    | 0.46 s avg; 98% under 1 s; highest classifier (0.960)               |
+| VR real-time (100% target) | **Qwen Standard (4-bit)**| 100% under 1 s for age 5–11; 74% FK pass rate; clean metrics        |
+| Proven Llama quality       | **Fast-1B**              | Best Llama classifier (0.940); 82% FK pass rate; 70% under 1 s      |
+| Quality ceiling            | **Standard-3B**          | Highest FK pass rate (84%); most stable readability metrics          |
+| Research baseline          | Base-3B / Base-1B        | Establishes the no-adapter floor                                     |

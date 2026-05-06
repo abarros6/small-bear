@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank4_layers8_seed1337_qwen4bit_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.7, min: 0.5, max: 9.6
+    SMOG          — avg: 8.5  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.3
+    Coleman-Liau  — avg: 8.7
+    Lexical div.  — avg: 0.696  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 85
+    FK <= 7.0 target: 38/50 pass (76.0%)
+    Worst offenders:
+      FK 9.6: 'Why is there a person from a pharmacy here? I thought pharma'
+      FK 8.7: 'I'm going to miss my best friend's birthday party because I''
+      FK 8.3: 'My friend wants to come visit. Can she come whenever she wan'
+
+  Latency (50 samples):
+    avg: 0.55s, min: 0.22s, max: 1.47s
+    Under 1.0s target: 44/50
+    Avg tokens/response: 103
+    Avg tokens/second:   179.3
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 38/50
+

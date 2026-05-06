@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed1337_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.6, min: 1.3, max: 10.7
+    SMOG          — avg: 9.4  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.5
+    Coleman-Liau  — avg: 7.2
+    Lexical div.  — avg: 0.697  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 99
+    FK <= 7.0 target: 26/50 pass (52.0%)
+    Worst offenders:
+      FK 10.7: 'Where does my food come from in the hospital?'
+      FK 10.3: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 9.8: 'Why is there a person from a pharmacy here? I thought pharma'
+
+  Latency (50 samples):
+    avg: 2.72s, min: 1.05s, max: 6.54s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 120
+    Avg tokens/second:   43.5
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 26/50
+

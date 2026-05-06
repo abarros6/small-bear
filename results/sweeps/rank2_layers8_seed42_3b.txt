@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed42_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.6, min: 2.5, max: 9.3
+    SMOG          — avg: 9.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.2
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.697  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 101
+    FK <= 7.0 target: 30/50 pass (60.0%)
+    Worst offenders:
+      FK 9.3: 'What are Bravery Beads?'
+      FK 9.2: 'Why do the nurses keep waking me up at night?'
+      FK 9.1: 'Why can't I bring my balloon into the hospital?'
+
+  Latency (50 samples):
+    avg: 2.74s, min: 0.93s, max: 6.54s
+    Under 1.0s target: 1/50
+    Avg tokens/response: 121
+    Avg tokens/second:   43.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 30/50
+

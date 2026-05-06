@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.9, min: 2.6, max: 9.4
+    SMOG          — avg: 8.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.3
+    Coleman-Liau  — avg: 6.4
+    Lexical div.  — avg: 0.767  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 71
+    FK <= 7.0 target: 40/50 pass (80.0%)
+    Worst offenders:
+      FK 9.4: 'Can I watch TV?'
+      FK 8.5: 'Why does my room smell weird? I don't like it here.'
+      FK 8.0: 'I don't want them to look at my armband again. They keep che'
+
+  Latency (50 samples):
+    avg: 0.86s, min: 0.47s, max: 2.06s
+    Under 1.0s target: 44/50
+    Avg tokens/response: 85
+    Avg tokens/second:   98.2
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 40/50
+
