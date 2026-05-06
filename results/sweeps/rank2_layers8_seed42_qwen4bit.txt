@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed42_qwen4bit_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.9, min: 2.6, max: 9.2
+    SMOG          — avg: 8.7  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.8
+    Coleman-Liau  — avg: 6.1
+    Lexical div.  — avg: 0.660  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 83
+    FK <= 7.0 target: 39/50 pass (78.0%)
+    Worst offenders:
+      FK 9.2: 'What is the SMILE Room?'
+      FK 9.2: 'I heard a loud beeping sound and it scared me.'
+      FK 8.9: 'A lady said she's a child life specialist. What does that me'
+
+  Latency (50 samples):
+    avg: 0.52s, min: 0.28s, max: 1.42s
+    Under 1.0s target: 47/50
+    Avg tokens/response: 99
+    Avg tokens/second:   184.9
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 39/50
+

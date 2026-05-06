@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed42_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.9, min: 3.2, max: 9.0
+    SMOG          — avg: 8.5  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.6
+    Coleman-Liau  — avg: 6.6
+    Lexical div.  — avg: 0.773  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 72
+    FK <= 7.0 target: 41/50 pass (82.0%)
+    Worst offenders:
+      FK 9.0: 'Why does my room smell weird? I don't like it here.'
+      FK 8.9: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.9: 'Someone new came in this morning and said they're my nurse n'
+
+  Latency (50 samples):
+    avg: 0.87s, min: 0.59s, max: 1.55s
+    Under 1.0s target: 41/50
+    Avg tokens/response: 86
+    Avg tokens/second:   98.8
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 41/50
+

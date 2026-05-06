@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank8_layers8_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.7, min: 3.1, max: 9.8
+    SMOG          — avg: 9.4  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.4
+    Coleman-Liau  — avg: 7.3
+    Lexical div.  — avg: 0.765  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 73
+    FK <= 7.0 target: 29/50 pass (58.0%)
+    Worst offenders:
+      FK 9.8: 'I heard a loud beeping sound and it scared me.'
+      FK 9.3: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.9: 'Can I watch TV or play games here?'
+
+  Latency (50 samples):
+    avg: 0.89s, min: 0.43s, max: 1.75s
+    Under 1.0s target: 38/50
+    Avg tokens/response: 87
+    Avg tokens/second:   96.5
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 29/50
+

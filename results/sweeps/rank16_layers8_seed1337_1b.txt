@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.7, min: 2.6, max: 9.5
+    SMOG          — avg: 9.2  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.0
+    Coleman-Liau  — avg: 7.3
+    Lexical div.  — avg: 0.764  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 73
+    FK <= 7.0 target: 30/50 pass (60.0%)
+    Worst offenders:
+      FK 9.5: 'What does the person with the guitar do?'
+      FK 9.5: 'Can I watch TV or play games here?'
+      FK 9.2: 'A lady said she's a child life specialist. What does that me'
+
+  Latency (50 samples):
+    avg: 0.91s, min: 0.60s, max: 1.39s
+    Under 1.0s target: 37/50
+    Avg tokens/response: 88
+    Avg tokens/second:   96.2
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 30/50
+

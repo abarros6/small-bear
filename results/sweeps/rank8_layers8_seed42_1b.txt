@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank8_layers8_seed42_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.4, min: 2.0, max: 12.0
+    SMOG          — avg: 8.9  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.9
+    Coleman-Liau  — avg: 7.2
+    Lexical div.  — avg: 0.780  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 68
+    FK <= 7.0 target: 34/50 pass (68.0%)
+    Worst offenders:
+      FK 12.0: 'Why can't I bring my balloon into the hospital?'
+      FK 9.8: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 9.6: 'Can I watch TV or play games here?'
+
+  Latency (50 samples):
+    avg: 0.85s, min: 0.46s, max: 1.41s
+    Under 1.0s target: 39/50
+    Avg tokens/response: 83
+    Avg tokens/second:   95.9
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 34/50
+

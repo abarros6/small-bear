@@ -7,6 +7,11 @@ mkdir -p adapters/3b/age_5_11 adapters/3b/age_12_18
 mkdir -p adapters/1b/age_5_11 adapters/1b/age_12_18
 mkdir -p adapters/fast/3b/age_5_11 adapters/fast/3b/age_12_18
 mkdir -p adapters/fast/1b/age_5_11 adapters/fast/1b/age_12_18
+mkdir -p adapters/qwen/age_5_11 adapters/qwen/age_12_18
+mkdir -p adapters/qwen4bit/age_5_11 adapters/qwen4bit/age_12_18
+mkdir -p adapters/qwen_standard/age_5_11 adapters/qwen_standard/age_12_18
+mkdir -p adapters/qwen4bit_standard/age_5_11 adapters/qwen4bit_standard/age_12_18
+mkdir -p adapters/sweeps configs/sweeps results/sweeps
 
 # Create empty source JSONL stubs — paste your data into these
 for category in emotional_reassurance faqs_general_curiosity hospital_rules_and_routines what_to_expect who_are_these_people; do

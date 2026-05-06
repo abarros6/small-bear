@@ -1,5 +1,5 @@
-mlx-lm==0.30.7
-mlx==0.30.6
+mlx-lm==0.31.3
+mlx==0.31.2
 transformers==5.2.0
 datasets==4.6.0
 textstat==0.7.13

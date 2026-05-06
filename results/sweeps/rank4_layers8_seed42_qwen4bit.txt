@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank4_layers8_seed42_qwen4bit_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.8, min: 1.9, max: 8.7
+    SMOG          — avg: 8.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.4
+    Coleman-Liau  — avg: 6.5
+    Lexical div.  — avg: 0.722  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 70
+    FK <= 7.0 target: 34/50 pass (68.0%)
+    Worst offenders:
+      FK 8.7: 'A lady said she's a child life specialist. What does that me'
+      FK 8.3: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.3: 'What if the doctors can't fix me?'
+
+  Latency (50 samples):
+    avg: 0.46s, min: 0.24s, max: 1.47s
+    Under 1.0s target: 49/50
+    Avg tokens/response: 84
+    Avg tokens/second:   177.8
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 34/50
+

@@ -38,16 +38,17 @@ DATA_DIR = Path("data")
 OUTPUT_DIR = Path("outputs")
 
 
-def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str = "", use_base: bool = False) -> list:
+def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str = "",
+                      use_base: bool = False, adapter_path_override: str = "") -> list:
     """Run inference on the validation set for one role and return results.
 
     Args:
-        role:       Role to evaluate — one of ROLES (e.g. 'age_5_11').
-        model_size: Base model size — '3b' or '1b'.
-        max_tokens: Hard token ceiling passed to generate_response.
-        variant:    Adapter subdirectory prefix, e.g. 'fast' → adapters/fast/{size}/{role}.
-                    Empty string (default) uses adapters/{size}/{role}.
-        use_base:   If True, load base model with no adapter (baseline comparison).
+        role:                  Role to evaluate — one of ROLES (e.g. 'age_5_11').
+        model_size:            Base model size — '3b', '1b', 'qwen4bit', etc.
+        max_tokens:            Hard token ceiling passed to generate_response.
+        variant:               Adapter subdirectory prefix, e.g. 'fast'.
+        use_base:              If True, load base model with no adapter.
+        adapter_path_override: Explicit adapter directory path — used for sweep runs.
 
     Returns:
         List of result dicts, one per validation example.
@@ -72,8 +73,10 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
         print(f"  Warning: {valid_path} is empty.")
         return []
 
-    print(f"\n  Loading {role} ({model_size}{f'/{variant}' if variant else ''}{' base' if use_base else ''})...")
-    model, tokenizer = load_model(role, model_size=model_size, variant=variant, use_base=use_base)
+    desc = adapter_path_override or (f"{model_size}/{variant}" if variant else model_size)
+    print(f"\n  Loading {role} ({desc}{' base' if use_base else ''})...")
+    model, tokenizer = load_model(role, model_size=model_size, variant=variant, use_base=use_base,
+                                  adapter_path_override=adapter_path_override)
 
     results = []
     for i, instruction in enumerate(instructions):
@@ -101,7 +104,7 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
 def main():
     parser = argparse.ArgumentParser(description="Generate model outputs for evaluation")
     parser.add_argument("--role", choices=ROLES, help="Single role (default: all roles)")
-    parser.add_argument("--model-size", choices=["3b", "1b"], default="3b",
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard"], default="3b",
                         help="Base model size (default: 3b)")
     parser.add_argument("--max-tokens", type=int, default=300)
     parser.add_argument("--variant", default="",
@@ -109,12 +112,21 @@ def main():
                              "Output files will be prefixed with the variant name.")
     parser.add_argument("--base", action="store_true",
                         help="Run on the base model with no adapter (for baseline comparison).")
+    parser.add_argument("--adapter-path", default="",
+                        help="Explicit adapter directory path, overrides default path construction. "
+                             "Use with --output-tag for sweep runs.")
+    parser.add_argument("--output-tag", default="",
+                        help="Override the output filename prefix (default: derived from --variant / --model-size). "
+                             "E.g. --output-tag rank4_layers8_seed42_1b → "
+                             "outputs/rank4_layers8_seed42_1b_age_5_11_outputs.jsonl")
     args = parser.parse_args()
 
     roles = [args.role] if args.role else ROLES
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    if args.base:
+    if args.output_tag:
+        tag = f"{args.output_tag}_"
+    elif args.base:
         tag = "base_"
     elif args.variant:
         tag = f"{args.variant}_"
@@ -122,11 +134,16 @@ def main():
         tag = ""
     all_results = []
     for role in roles:
-        results = generate_for_role(role, args.model_size, args.max_tokens, args.variant, args.base)
+        results = generate_for_role(role, args.model_size, args.max_tokens, args.variant, args.base,
+                                    adapter_path_override=args.adapter_path)
         if not results:
             continue
 
-        role_path = OUTPUT_DIR / f"{tag}{role}_{args.model_size}_outputs.jsonl"
+        # When --output-tag is given it already encodes model_size; don't double-append it.
+        if args.output_tag:
+            role_path = OUTPUT_DIR / f"{tag}{role}_outputs.jsonl"
+        else:
+            role_path = OUTPUT_DIR / f"{tag}{role}_{args.model_size}_outputs.jsonl"
         with open(role_path, "w") as f:
             for r in results:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -134,7 +151,10 @@ def main():
         all_results.extend(results)
 
     if all_results:
-        combined_path = OUTPUT_DIR / f"all_{tag}{args.model_size}_outputs.jsonl"
+        if args.output_tag:
+            combined_path = OUTPUT_DIR / f"all_{args.output_tag}_outputs.jsonl"
+        else:
+            combined_path = OUTPUT_DIR / f"all_{tag}{args.model_size}_outputs.jsonl"
         with open(combined_path, "w") as f:
             for r in all_results:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")

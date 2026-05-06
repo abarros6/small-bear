@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed42_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.5, min: 3.9, max: 9.7
+    SMOG          — avg: 9.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.2
+    Coleman-Liau  — avg: 7.2
+    Lexical div.  — avg: 0.775  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 75
+    FK <= 7.0 target: 33/50 pass (66.0%)
+    Worst offenders:
+      FK 9.7: 'What does the person with the guitar do?'
+      FK 9.6: 'Can I watch TV or play games here?'
+      FK 9.2: 'Why can't I sleep in the same bed as my mommy?'
+
+  Latency (50 samples):
+    avg: 0.98s, min: 0.60s, max: 1.58s
+    Under 1.0s target: 28/50
+    Avg tokens/response: 90
+    Avg tokens/second:   90.9
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 33/50
+

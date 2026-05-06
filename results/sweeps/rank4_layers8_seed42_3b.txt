@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank4_layers8_seed42_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.7, min: 4.1, max: 10.4
+    SMOG          — avg: 9.2  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.3
+    Coleman-Liau  — avg: 7.0
+    Lexical div.  — avg: 0.717  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 91
+    FK <= 7.0 target: 32/50 pass (64.0%)
+    Worst offenders:
+      FK 10.4: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 10.4: 'What are Bravery Beads?'
+      FK 8.9: 'Who is Ollie?'
+
+  Latency (50 samples):
+    avg: 2.49s, min: 1.08s, max: 5.43s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 109
+    Avg tokens/second:   43.4
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 32/50
+
