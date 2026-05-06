@@ -80,10 +80,12 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
 
     results = []
     for i, instruction in enumerate(instructions):
-        # No system prompt — matches training conditions
+        # SmolLM2 uses an empty system message to suppress its default template injection.
+        # All other models use None (no system message) to match training conditions.
+        sys_prompt = "" if model_size == "smollm2" else None
         response, latency = generate_response(
             model, tokenizer, instruction,
-            system_prompt=None,
+            system_prompt=sys_prompt,
             max_tokens=max_tokens,
         )
         token_count = len(tokenizer.encode(response))
@@ -104,7 +106,7 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
 def main():
     parser = argparse.ArgumentParser(description="Generate model outputs for evaluation")
     parser.add_argument("--role", choices=ROLES, help="Single role (default: all roles)")
-    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard"], default="3b",
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard", "smollm2"], default="3b",
                         help="Base model size (default: 3b)")
     parser.add_argument("--max-tokens", type=int, default=300)
     parser.add_argument("--variant", default="",

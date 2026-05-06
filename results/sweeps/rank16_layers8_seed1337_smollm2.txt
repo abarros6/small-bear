@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed1337_smollm2_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.0, min: 0.5, max: 9.8
+    SMOG          — avg: 8.4  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.6
+    Coleman-Liau  — avg: 6.6
+    Lexical div.  — avg: 0.743  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 72
+    FK <= 7.0 target: 34/50 pass (68.0%)
+    Worst offenders:
+      FK 9.8: 'My mom had to leave and I'm scared to be here alone.'
+      FK 8.9: 'A lady said she's a child life specialist. What does that me'
+      FK 8.7: 'Why is there a person from a pharmacy here? I thought pharma'
+
+  Latency (50 samples):
+    avg: 0.85s, min: 0.16s, max: 1.42s
+    Under 1.0s target: 33/50
+    Avg tokens/response: 86
+    Avg tokens/second:   100.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 34/50
+

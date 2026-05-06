@@ -40,6 +40,7 @@ the crossover.
 | Framework | MLX (Apple Silicon, on-device GPU) |
 | Base model (primary) | `mlx-community/Llama-3.2-3B-Instruct-4bit` |
 | Base model (ablation) | `mlx-community/Llama-3.2-1B-Instruct-4bit` |
+| Base model (cross-arch) | `mlx-community/Qwen2-0.5B-Instruct-4bit`, `mlx-community/SmolLM2-360M-Instruct` |
 | Method | QLoRA — 4-bit quantized base, float32 LoRA adapters |
 | mlx-lm | 0.30.7 (pinned — see Known Working Versions) |
 
@@ -454,8 +455,8 @@ scikit-learn    >=1.4.0   (inter-role style separation classifier in evaluate.py
 
 ## Ablation Study: 3B vs. 1B vs. Standard vs. Fast
 
-All four adapter variants have been trained and evaluated. Results live in `results/`. Full
-numbers and the inter-role classifier setup are in `paper/Paper.tex` §5.
+All variants have been trained and evaluated. Results live in `results/`. Full numbers and
+the inter-role classifier setup are in `paper/Paper.tex` §§5–6.
 
 | Variant | Base model | Adapter paths |
 |---------|------------|---------------|
@@ -463,17 +464,24 @@ numbers and the inter-role classifier setup are in `paper/Paper.tex` §5.
 | Standard 1B | Llama-3.2-1B-Instruct-4bit | adapters/1b/{role}/ |
 | Fast 3B | Llama-3.2-3B-Instruct-4bit | adapters/fast/3b/{role}/ |
 | Fast 1B | Llama-3.2-1B-Instruct-4bit | adapters/fast/1b/{role}/ |
+| Qwen Standard/Fast | Qwen2-0.5B-Instruct-4bit | adapters/qwen4bit_standard/{role}/, adapters/fast/qwen4bit/{role}/ |
+| SmolLM2 Standard | SmolLM2-360M-Instruct | adapters/smollm2/{role}/ |
+| SmolLM2 Fast | SmolLM2-360M-Instruct | adapters/fast/smollm2/{role}/ |
 
-**Headline metrics (5–11 group; full tables in `paper/Paper.tex` §5):**
+**Headline metrics (5–11 group; full tables in `paper/Paper.tex` §§5–6 and `docs/RESULTS_COMPARISON.md`):**
 
-| Variant     | FK ≤ 7.0 pass | Avg latency | Classifier acc. |
-|-------------|---------------|-------------|-----------------|
-| Standard-3B | 84%           | 2.37 s      | 0.920           |
-| Standard-1B | 72%           | 1.09 s      | 0.890           |
-| Fast-3B     | 76%           | 2.83 s      | 0.900           |
-| Fast-1B     | **82%**       | **0.93 s**  | **0.940**       |
-| Base-3B     | 12%           | 3.99 s      | 0.700           |
-| Base-1B     | 14%           | 2.01 s      | 0.660           |
+| Variant          | FK ≤ 7.0 pass | Avg latency | Classifier acc. |
+|------------------|---------------|-------------|-----------------|
+| Standard-3B      | 84%           | 2.37 s      | 0.920           |
+| Standard-1B      | 72%           | 1.09 s      | 0.890           |
+| Fast-3B          | 76%           | 2.83 s      | 0.900           |
+| Fast-1B          | 82%           | 0.93 s      | 0.940           |
+| Qwen Fast (4bit) | 68%           | **0.46 s**  | **0.960**       |
+| Qwen Std (4bit)  | 74%           | 0.59 s      | 0.940           |
+| SmolLM2 Standard | **84%**       | 0.81 s      | 0.950           |
+| SmolLM2 Fast     | 64%           | 1.08 s      | 0.920           |
+| Base-3B          | 12%           | 3.99 s      | 0.700           |
+| Base-1B          | 14%           | 2.01 s      | 0.660           |
 
 **Key findings:**
 - **Configuration-ordering crossover**: Standard wins on 3B; Fast wins on 1B. Consistent across
@@ -494,23 +502,22 @@ crossover is Llama-specific.
 
 ### Known Gaps (paper Limitations §)
 
-These motivate the experiments in `docs/EXPERIMENTS.md`:
+Status updated after §1 rank sweep and §2 cross-architecture experiments:
 
-- **Confounded comparison.** Standard and Fast differ in both `rank` AND `num_layers`. The
-  crossover cannot be attributed to either factor in isolation without a controlled sweep
-  varying one at a time. (`docs/EXPERIMENTS.md` §1.)
-- **Single-seed runs.** All eight runs use seed 42. No variance estimates for any reported
-  metric — whether the crossover is stable or a seed artifact is unknown.
-- **Standard adapter perplexity not collected.** Only Fast-adapter perplexity appears in the
-  paper (Table 1). Filling this requires a val-loss-only pass on the existing Standard
-  checkpoints. (`docs/EXPERIMENTS.md` §3.)
-- **Single model family.** Only Llama 3.2 1B and 3B were tested. Whether the crossover
-  generalizes to Qwen, Gemma, or smaller scales is open. (`docs/EXPERIMENTS.md` §2.)
+- **Confounded comparison — RESOLVED for rank.** A controlled rank sweep (fixed `num_layers=8`,
+  ranks 2/4/8/16, 4 models, 2 seeds) confirms **rank** as the operative variable via capacity
+  regularization. The independent effect of `num_layers` on the original Llama configurations
+  remains unquantified. (`docs/EXPERIMENTS.md` §1.)
+- **Single-seed runs — PARTIALLY RESOLVED.** The rank sweep reports mean ± std across 2 seeds.
+  The original 8 runs and the cross-architecture evals (Qwen, SmolLM2) still use seed 42 only.
+- **Standard adapter perplexity not collected.** Still unresolved. (`docs/EXPERIMENTS.md` §3.)
+- **Single model family — RESOLVED.** Qwen 2 0.5B and SmolLM2 360M evaluated; crossover
+  confirmed not Llama-specific. Rank sweep covers all four architectures. Qwen 2.5 family
+  and models above 3B remain untested.
 
 ### Forward Roadmap
 
-See `docs/EXPERIMENTS.md` for the prioritized, time-bounded plan: controlled rank/layer ablation
-to identify the crossover mechanism, a Qwen 2.5 family sweep, a SmolLM2 stretch probe, quick
-wins like the missing Standard perplexity, and TODO items (human eval, safety eval, dataset
-quality pass).
+See `docs/EXPERIMENTS.md` for current status. §1 (rank sweep) and §2 (SmolLM2, Qwen 2 0.5B)
+are complete. Remaining work: Qwen 2.5 family sweep (§2, not started), Standard perplexity
+(§3, quick win), and longer-term items (human eval, safety eval, dataset quality pass).
 

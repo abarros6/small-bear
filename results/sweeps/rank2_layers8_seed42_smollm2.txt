@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank2_layers8_seed42_smollm2_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.5, min: 0.6, max: 13.8
+    SMOG          — avg: 9.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.6
+    Coleman-Liau  — avg: 6.9
+    Lexical div.  — avg: 0.656  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 114
+    FK <= 7.0 target: 28/50 pass (56.0%)
+    Worst offenders:
+      FK 13.8: 'What is the SMILE Room?'
+      FK 13.2: 'A lady said she's a child life specialist. What does that me'
+      FK 12.7: 'What's a dietitian? Somebody called a dietitian came to talk'
+
+  Latency (50 samples):
+    avg: 1.31s, min: 0.10s, max: 2.76s
+    Under 1.0s target: 25/50
+    Avg tokens/response: 138
+    Avg tokens/second:   100.8
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 28/50
+

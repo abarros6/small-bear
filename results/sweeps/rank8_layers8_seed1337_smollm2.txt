@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank8_layers8_seed1337_smollm2_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.7, min: 0.6, max: 10.0
+    SMOG          — avg: 8.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.4
+    Coleman-Liau  — avg: 6.4
+    Lexical div.  — avg: 0.715  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 88
+    FK <= 7.0 target: 38/50 pass (76.0%)
+    Worst offenders:
+      FK 10.0: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.8: 'What are Bravery Beads?'
+      FK 8.5: 'What is the SMILE Room?'
+
+  Latency (50 samples):
+    avg: 1.03s, min: 0.13s, max: 2.82s
+    Under 1.0s target: 34/50
+    Avg tokens/response: 106
+    Avg tokens/second:   99.3
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 38/50
+

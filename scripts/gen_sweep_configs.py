@@ -21,6 +21,13 @@ MODELS     = {
     "1b":       "mlx-community/Llama-3.2-1B-Instruct-4bit",
     "3b":       "mlx-community/Llama-3.2-3B-Instruct-4bit",
     "qwen4bit": "mlx-community/Qwen2-0.5B-Instruct-4bit",
+    "smollm2":  "mlx-community/SmolLM2-360M-Instruct",
+}
+
+# SmolLM2 training data uses empty system messages to suppress the ChatML
+# default injection — generated with: prepare_data.py --data-dir data/smollm --add-empty-system
+DATA_DIRS  = {
+    "smollm2": "data/smollm",
 }
 
 NUM_LAYERS = 8
@@ -34,7 +41,7 @@ _TMPL = """\
 model: "{model_path}"
 train: true
 fine_tune_type: "lora"
-data: "data/{role}"
+data: "{data_dir}/{role}"
 
 num_layers: {num_layers}
 
@@ -90,6 +97,7 @@ def main():
             seed=seed,
             model_key=model_key,
             model_path=model_path,
+            data_dir=DATA_DIRS.get(model_key, "data"),
             role=ROLE,
             name=name,
         )

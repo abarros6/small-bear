@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/rank16_layers8_seed42_smollm2_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.5, min: 1.6, max: 9.4
+    SMOG          — avg: 8.2  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.2
+    Coleman-Liau  — avg: 6.2
+    Lexical div.  — avg: 0.737  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 71
+    FK <= 7.0 target: 42/50 pass (84.0%)
+    Worst offenders:
+      FK 9.4: 'Why does everyone keep washing their hands so much?'
+      FK 8.8: 'A lady said she's a child life specialist. What does that me'
+      FK 8.0: 'What are Bravery Beads?'
+
+  Latency (50 samples):
+    avg: 0.83s, min: 0.32s, max: 2.73s
+    Under 1.0s target: 41/50
+    Avg tokens/response: 85
+    Avg tokens/second:   101.1
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 42/50
+

@@ -24,6 +24,7 @@ Pre-formatting chat strings causes double-BOS tokens and NaN gradients — do no
 Usage:
     python src/prepare_data.py
     python src/prepare_data.py --source-dir data/source --seed 42
+    python src/prepare_data.py --data-dir data/smollm --add-empty-system
 """
 
 import argparse
@@ -88,18 +89,25 @@ def load_examples(source_dir: Path) -> dict:
     return by_role
 
 
-def to_messages(ex: dict) -> dict:
+def to_messages(ex: dict, add_empty_system: bool = False) -> dict:
     """Convert a source example to the messages format expected by mlx_lm CLI.
 
     No system prompt — style is encoded entirely in the adapter weights.
     The VR application injects its own system prompt at inference time.
+
+    add_empty_system: prepend {"role": "system", "content": ""} to suppress the default
+    system message that some chat templates (e.g. SmolLM2) inject when no system role is
+    present. Without this, the default "You are a helpful AI assistant named SmolLM..."
+    text would be baked into training, creating a prompt-following association.
     """
-    return {
-        "messages": [
-            {"role": "user",      "content": ex["instruction"].strip()},
-            {"role": "assistant", "content": ex["response"].strip()},
-        ]
-    }
+    messages = []
+    if add_empty_system:
+        messages.append({"role": "system", "content": ""})
+    messages.extend([
+        {"role": "user",      "content": ex["instruction"].strip()},
+        {"role": "assistant", "content": ex["response"].strip()},
+    ])
+    return {"messages": messages}
 
 
 def write_jsonl(path: Path, examples: list):
@@ -109,7 +117,7 @@ def write_jsonl(path: Path, examples: list):
             f.write(json.dumps(ex, ensure_ascii=False) + "\n")
 
 
-def prepare(source_dir: Path, data_dir: Path, seed: int):
+def prepare(source_dir: Path, data_dir: Path, seed: int, add_empty_system: bool = False):
     train_dir = source_dir / "train"
     validate_dir = source_dir / "validate"
 
@@ -122,7 +130,11 @@ def prepare(source_dir: Path, data_dir: Path, seed: int):
     print(f"\nSource: {source_dir}")
     print(f"  train/    → {train_dir}")
     print(f"  validate/ → {validate_dir}")
-    print(f"  Seed: {seed}\n")
+    print(f"  Seed: {seed}")
+    if add_empty_system:
+        print("  Empty system message: ON (suppresses default template injection)\n")
+    else:
+        print()
 
     print("Loading train/")
     by_role_train = load_examples(train_dir)
@@ -142,8 +154,8 @@ def prepare(source_dir: Path, data_dir: Path, seed: int):
         rng = random.Random(seed)
         rng.shuffle(train_examples)
 
-        train_out = [to_messages(ex) for ex in train_examples]
-        valid_out = [to_messages(ex) for ex in valid_examples]
+        train_out = [to_messages(ex, add_empty_system) for ex in train_examples]
+        valid_out = [to_messages(ex, add_empty_system) for ex in valid_examples]
 
         train_path = data_dir / role / "train.jsonl"
         valid_path = data_dir / role / "valid.jsonl"
@@ -183,6 +195,12 @@ def main():
         default=42,
         help="Random seed for training shuffle (default: 42)",
     )
+    parser.add_argument(
+        "--add-empty-system",
+        action="store_true",
+        help="Prepend an empty system message to each example, suppressing the default "
+             "template injection used by models like SmolLM2 (ChatML family).",
+    )
     args = parser.parse_args()
 
     source_dir = Path(args.source_dir)
@@ -190,7 +208,7 @@ def main():
         print(f"Error: source directory not found: {source_dir}")
         raise SystemExit(1)
 
-    prepare(source_dir, Path(args.data_dir), args.seed)
+    prepare(source_dir, Path(args.data_dir), args.seed, add_empty_system=args.add_empty_system)
 
 
 if __name__ == "__main__":

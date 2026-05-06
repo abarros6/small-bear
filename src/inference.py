@@ -40,15 +40,16 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from constants import BASE_MODEL_3B, BASE_MODEL_1B, BASE_MODEL_QWEN, BASE_MODEL_QWEN4BIT, ROLES
+from constants import BASE_MODEL_3B, BASE_MODEL_1B, BASE_MODEL_QWEN, BASE_MODEL_QWEN4BIT, BASE_MODEL_SMOLLM2, ROLES
 
 _BASE_MODEL = {
-    "3b":          BASE_MODEL_3B,
-    "1b":          BASE_MODEL_1B,
-    "qwen":        BASE_MODEL_QWEN,
-    "qwen4bit":    BASE_MODEL_QWEN4BIT,
-    "qwen_standard":    BASE_MODEL_QWEN,
+    "3b":                BASE_MODEL_3B,
+    "1b":                BASE_MODEL_1B,
+    "qwen":              BASE_MODEL_QWEN,
+    "qwen4bit":          BASE_MODEL_QWEN4BIT,
+    "qwen_standard":     BASE_MODEL_QWEN,
     "qwen4bit_standard": BASE_MODEL_QWEN4BIT,
+    "smollm2":           BASE_MODEL_SMOLLM2,
 }
 
 ADAPTER_DIR = Path("adapters")
@@ -151,7 +152,7 @@ def generate_response(
     from mlx_lm.sample_utils import make_sampler, make_logits_processors
 
     messages = []
-    if system_prompt:
+    if system_prompt is not None:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": query.strip()})
 
@@ -188,8 +189,8 @@ def main():
                         help="Load raw base model (no adapter) — for comparison")
     parser.add_argument("--role", "-r", choices=ROLES,
                         help=f"Role adapter to load: {' | '.join(ROLES)}")
-    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard"], default="3b",
-                        help="Base model size: 3b (default), 1b, qwen, qwen4bit, qwen_standard, qwen4bit_standard")
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard", "smollm2"], default="3b",
+                        help="Base model size: 3b (default), 1b, qwen, qwen4bit, qwen_standard, qwen4bit_standard, smollm2")
     parser.add_argument("--system-prompt", "-s",
                         help="Optional system prompt (e.g. for VR deployment testing). "
                              "Omit to run without one — matching training conditions.")

@@ -12,5 +12,6 @@ BASE_MODEL_3B       = "mlx-community/Llama-3.2-3B-Instruct-4bit"
 BASE_MODEL_1B       = "mlx-community/Llama-3.2-1B-Instruct-4bit"
 BASE_MODEL_QWEN     = "Qwen/Qwen2-0.5B-Instruct-MLX"
 BASE_MODEL_QWEN4BIT = "mlx-community/Qwen2-0.5B-Instruct-4bit"
+BASE_MODEL_SMOLLM2  = "mlx-community/SmolLM2-360M-Instruct"
 
 ROLES = ["age_5_11", "age_12_18"]

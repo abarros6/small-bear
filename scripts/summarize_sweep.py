@@ -28,7 +28,7 @@ _NAME_RE = re.compile(
     r"rank(\d+)_layers(\d+)_seed(\d+)_(.+?)_age_5_11_outputs\.jsonl"
 )
 
-MODEL_ORDER = ["1b", "3b", "qwen4bit"]
+MODEL_ORDER = ["1b", "3b", "qwen4bit", "smollm2"]
 RANK_ORDER  = [2, 4, 8, 16]
 
 
