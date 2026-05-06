@@ -510,7 +510,7 @@ Status updated after §1 rank sweep and §2 cross-architecture experiments:
   remains unquantified. (`docs/EXPERIMENTS.md` §1.)
 - **Single-seed runs — PARTIALLY RESOLVED.** The rank sweep reports mean ± std across 2 seeds.
   The original 8 runs and the cross-architecture evals (Qwen, SmolLM2) still use seed 42 only.
-- **Standard adapter perplexity not collected.** Still unresolved. (`docs/EXPERIMENTS.md` §3.)
+- **Standard adapter perplexity — RESOLVED.** Post-hoc `--test` pass on all 8 Llama adapters. Perplexity crossover corroborates FK crossover: Standard-3B < Fast-3B; Fast-1B < Standard-1B. Paper Table 1 updated. (`docs/EXPERIMENTS.md` §3.)
 - **Single model family — RESOLVED.** Qwen 2 0.5B and SmolLM2 360M evaluated; crossover
   confirmed not Llama-specific. Rank sweep covers all four architectures. Qwen 2.5 family
   and models above 3B remain untested.
@@ -518,6 +518,6 @@ Status updated after §1 rank sweep and §2 cross-architecture experiments:
 ### Forward Roadmap
 
 See `docs/EXPERIMENTS.md` for current status. §1 (rank sweep) and §2 (SmolLM2, Qwen 2 0.5B)
-are complete. Remaining work: Qwen 2.5 family sweep (§2, not started), Standard perplexity
-(§3, quick win), and longer-term items (human eval, safety eval, dataset quality pass).
+are complete. §3 (Standard perplexity) is complete. Remaining work: Qwen 2.5 family sweep
+(§2, not started), and longer-term items (human eval, safety eval, dataset quality pass).
 

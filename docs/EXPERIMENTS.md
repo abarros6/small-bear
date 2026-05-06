@@ -80,19 +80,32 @@ family.
 
 ---
 
-## §3 — Quick Wins
+## §3 — Quick Wins — **COMPLETE**
 
-### Standard adapter perplexity — NOT DONE
+### Standard adapter perplexity — DONE
 
-The paper's Table 1 reports Fast-adapter perplexity but not Standard. Fix: val-loss-only
-pass over `data/{role}/valid.jsonl` using each existing Standard adapter checkpoint at
-step 600.
+Table 1 in the paper now reports validation perplexity for all 8 Llama adapter configurations.
+Values were obtained via a post-hoc `--test` pass (full-sequence cross-entropy, not masked) on
+`data/{role}/valid.jsonl` using the step-600 checkpoint for each adapter.
 
-Total: **4 eval passes**. Wall-clock ~10 min.
+Command used:
+```
+mlx_lm.lora --model <base> --adapter-path adapters/{size}/{role} --data data/{role} --test --val-batches -1
+```
 
-Command: `mlx_lm.lora --config configs/{role}_lora.yaml --test` (check if `--test` supports
-per-checkpoint eval) or a small standalone script loading the adapter and computing mean
-cross-entropy.
+Results (val loss / PPL):
+| Config | age_5_11 | age_12_18 |
+|--------|----------|-----------|
+| Standard-3B | 2.900 / 18.17 | 2.830 / 16.95 |
+| Standard-1B | 3.185 / 24.17 | 3.105 / 22.31 |
+| Fast-3B     | 3.034 / 20.77 | 3.073 / 21.61 |
+| Fast-1B     | 3.106 / 22.32 | 2.985 / 19.79 |
+
+**Key finding:** Perplexity crossover corroborates FK crossover — Standard-3B < Fast-3B;
+Fast-1B < Standard-1B. Supports the capacity-regularization interpretation.
+
+Note: these values are higher than the training-time masked val loss (1.7–1.9 for Fast runs)
+because the `--test` pass includes prompt tokens in the loss.
 
 ---
 
