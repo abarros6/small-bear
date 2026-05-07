@@ -30,15 +30,37 @@ SmolLM2 360M (32 layers, hidden 960) behaves like a large model despite 360M par
 
 **Infrastructure:** `scripts/gen_sweep_configs.py`, `scripts/run_exp1.sh`
 
-**Optional depth (not yet done):**
-- Layer sweep at fixed rank: `rank=4`, `num_layers ∈ {4, 8, 16}`, Llama 1B/3B, 2 seeds
-  = 12 runs (~6 h). Quantifies the independent contribution of `num_layers` to the
-  original Standard-vs-Fast comparison on Llama. Lower priority now that rank is confirmed
-  as the primary driver.
+### Layer sweep (num_layers at fixed rank=4) — COMPLETE
+
+**Design:** Fixed `rank=4`, `num_layers ∈ {4, 8, 16}`, Llama 1B and 3B, seeds 42 and 1337,
+role `age_5_11`. 12 runs total (4 reusing rank sweep adapters at `num_layers=8`, no extra training).
+
+**Infrastructure:** `scripts/gen_layer_sweep_configs.py`, `scripts/run_layer_sweep.sh`,
+`scripts/summarize_layer_sweep.py`
+
+**Results:** `results/layer_sweep/summary.md`
+
+| Model | L=4 FK% | L=8 FK% | L=16 FK% | L=8→16 Δ |
+|-------|---------|---------|----------|----------|
+| Llama 1B | 75.0 ± 5.0% | 67.0 ± 1.0% | 71.0 ± 3.0% | +4.0% |
+| Llama 3B | 58.0 ± 6.0% | 58.0 ± 2.0% | 65.0 ± 1.0% | +7.0% |
+
+**Key findings:**
+- `num_layers` is an independent contributor to the crossover: at fixed rank=4, layers=16
+  beats layers=8 by +4% (1B) and +7% (3B). The Standard configuration's depth advantage
+  (16 vs. 8 layers) contributes to its superiority on 3B beyond rank alone.
+- Small models prefer fewer layers: on 1B, peak FK is at `num_layers=4` (75%), declining
+  at layers=8 (67%) and recovering partially at layers=16 (71%). Adapting fewer layers with
+  lower rank reduces over-parameterization for capacity-constrained models.
+- Latency constraint: 1B layers=16 averages 1.07s, exceeding the 1.0s real-time target.
+  Layers=4 (0.92s) and layers=8 (0.93s) remain within target.
+- Combined interpretation: the original crossover reflects the joint effect of rank and depth.
+  Rank is the dominant factor (confirmed by rank sweep); depth is a secondary independent
+  contributor in the same direction.
 
 ---
 
-## §2 — **PARTIALLY COMPLETE** — Alternative Model Family + Smaller Scales
+## §2 — **COMPLETE** — Alternative Model Family + Smaller Scales
 
 **Question.** Is the crossover Llama-specific or architecture-general? Does it persist
 at even smaller scales?
@@ -63,20 +85,35 @@ highest classifier accuracy (0.960). Rank sweep confirms Qwen is in the small-mo
 
 **Results:** `results/qwen_eval.txt`, `results/qwen4bit_eval.txt` | Paper §6.2
 
-### Qwen 2.5 family sweep — NOT STARTED
+### Qwen 2.5 family sweep — COMPLETE
 
-| Axis | Values |
-|------|--------|
-| Model | Qwen 2.5 0.5B-Instruct-4bit, Qwen 2.5 1.5B-Instruct-4bit, Qwen 2.5 3B-Instruct-4bit |
-| Adapter config | Standard (r=8, 16 layers), Fast (r=4, 8 layers) |
-| Role | both age groups |
-| Seed | 42 |
+2 configs × 3 models × 2 roles = 12 runs. `scripts/run_qwen25.sh`.
 
-Total: 2 configs × 3 models × 2 roles = **12 runs**. Wall-clock ~5–6 h.
+**Results:** `results/qwen25_*_eval.txt`
 
-Lower priority than it was — the Qwen 2 0.5B and SmolLM2 results already provide
-cross-architecture evidence. This sweep would add a capacity ladder within the Qwen 2.5
-family.
+| Variant | FK ≤ 7.0 | Avg latency | Classifier acc. |
+|---------|----------|-------------|-----------------|
+| Qwen2.5-0.5B Fast | 76% | **0.46s** | 0.950 |
+| Qwen2.5-0.5B Standard | 72% | 0.57s | 0.940 |
+| Qwen2.5-1.5B Fast | 70% | 0.98s | **0.980** |
+| Qwen2.5-1.5B Standard | 48% | 1.31s | 0.890 |
+| Qwen2.5-3B Fast | 76% | 1.89s | 0.970 |
+| Qwen2.5-3B Standard | 58% | 2.23s | 0.930 |
+
+**Key finding:** Fast dominates Standard on **all three Qwen 2.5 sizes** (no crossover). This
+contrasts with the original Llama results where Standard won on 3B and Fast won on 1B. The
+Fast-wins-uniformly pattern on Qwen 2.5 suggests the crossover may be family-specific, not a
+universal size effect. Consistent with the rank-sweep finding that Qwen is in the small-model
+regime (peak at r=2) — Standard (r=8) is over-parameterized across the full Qwen 2.5 capacity
+ladder.
+
+**Latency:** Qwen 2.5 tokens/sec degrades steeply with model size (177 → 75 → 44 tok/s).
+The 1.5B and 3B variants miss the 1.0s real-time target on most samples despite fewer LoRA
+layers under Fast config. Only 0.5B Fast reliably meets the latency target (50/50 under 1.0s).
+
+**Deployment recommendation within Qwen 2.5:** 0.5B Fast — tied for best FK pass (76%),
+fastest latency (0.46s), strong classifier (0.950). The 1.5B Fast achieves the best classifier
+of any trained adapter (0.980) but is borderline on latency (26/50 under 1.0s).
 
 ---
 
@@ -124,14 +161,68 @@ All infrastructure items from the original roadmap are implemented:
 
 ---
 
-## §5 — TODO (future, not scheduled)
+## §5 — Dataset Quality Pass — **COMPLETE**
 
-- **Dataset quality pass.** User-owned. Should precede any further training that depends
-  on the dataset. Current results are a lower bound on achievable quality.
+Four improvement areas addressed. Dataset rebuilt and `prepare_data.py` re-run.
+
+### Area 1 — Independent validation set — DONE
+
+All 100 original validation examples (generated in the same Claude sessions as training data,
+creating circular validation) replaced with 100 new independent examples written with different
+prompting: atypical phrasings, edge-of-category scenarios, emotionally genuine situations.
+10 per category × role bucket. Files: `data/source/validate/`.
+
+### Area 2 — Question style diversification — DONE
+
+73 new training examples added across all five categories using non-interrogative and atypical
+question forms: emotional statements (`"I don't want to be here"`), incomplete thoughts
+(`"What if the nurse... I don't know, what if she hurts me?"`), resistance, overheard fears,
+post-surgery confusion. Distributed to existing category files in `data/source/train/`.
+
+### Area 3 — Adversarial / edge-case examples — DONE
+
+50 new training examples (`data/source/train/edge_cases.jsonl`, 25 per role) covering six
+out-of-distribution types:
+- **Out-of-scope requests** — "Can you call my mom?", "Can you contact my school?"
+- **Safety-boundary probes** — "Do I have cancer?", "Can I increase my own pain medication dose?"
+- **Distress escalation** — "I can't breathe properly", "My chest feels tight"
+- **Self-harm disclosure** — "I had thoughts of hurting myself last night"
+- **Meta/identity questions** — "Are you a real person?", "Who made you?"
+- **Boredom/disengagement** — "I'm bored", "Can you play a game with me?"
+
+Responses redirect appropriately, never diagnose, never pretend to be human. Category field
+is `"edge_cases"` — these do not pollute the five named categories.
+
+### Area 4 — Quality cull — TODO
+
+Programmatic scoring of all training examples on FK grade and response length to identify
+and remove weakest examples (targets: FK > 9.0 for 5-11 role, response < 30 words, formulaic
+openers). Not yet run — should precede next retraining run.
+
+### Updated dataset totals
+
+| File | Examples |
+|------|----------|
+| `train/edge_cases.jsonl` | 50 |
+| `train/emotional_reassurance.jsonl` | 225 |
+| `train/faqs_general_curiosity.jsonl` | 213 |
+| `train/hospital_rules_and_routines.jsonl` | 212 |
+| `train/what_to_expect.jsonl` | 218 |
+| `train/who_are_these_people.jsonl` | 205 |
+| **Total train** | **1123** |
+| `validate/` (5 files) | 100 (20 each) |
+
+After `prepare_data.py`: age_5_11 → 562 train / 50 valid; age_12_18 → 561 train / 50 valid.
+
+---
+
+## §6 — TODO (future, not scheduled)
+
+- **Dataset quality cull (Area 4).** Score all training examples on FK grade and response
+  length, flag weak candidates for removal before next retraining run. See §5 above.
 - **Human evaluation.** Peer raters score outputs on age-appropriateness (~30 outputs per
   adapter, inter-rater agreement check). Addresses the "learned stylistic imitation vs.
   genuinely age-appropriate" limitation.
-- **Safety evaluation.** Guard model (e.g. Llama Guard) or trained classifier. Most useful
-  once deployment configuration is locked in.
-- **Layer sweep at fixed rank.** `rank=4`, `num_layers ∈ {4, 8, 16}`, Llama 1B/3B, 2 seeds.
-  Quantifies the independent `num_layers` contribution (see §1 optional depth above).
+- **Safety evaluation / guard model.** Blocking inline classifier (DistilBERT distilled from
+  Llama Guard 3 1B labels) placed before adapter response is shown. Planned architecture
+  confirmed: Option A (tiny fine-tuned classifier), ~66M params, ~30ms inference.

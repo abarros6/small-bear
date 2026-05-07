@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers16_seed42_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.5, min: 2.4, max: 9.9
+    SMOG          — avg: 9.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.4
+    Coleman-Liau  — avg: 7.0
+    Lexical div.  — avg: 0.783  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 71
+    FK <= 7.0 target: 32/50 pass (64.0%)
+    Worst offenders:
+      FK 9.9: 'Why can't I bring my balloon into the hospital?'
+      FK 8.9: 'Why do I have to wear this bracelet on my arm?'
+      FK 8.9: 'Why do I have to wear this bracelet on my arm?'
+
+  Latency (50 samples):
+    avg: 2.24s, min: 1.36s, max: 2.98s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 86
+    Avg tokens/second:   38.1
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 32/50
+

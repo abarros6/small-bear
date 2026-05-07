@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers16_seed1337_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.5, min: 3.4, max: 9.3
+    SMOG          — avg: 9.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.1
+    Coleman-Liau  — avg: 7.3
+    Lexical div.  — avg: 0.789  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 70
+    FK <= 7.0 target: 33/50 pass (66.0%)
+    Worst offenders:
+      FK 9.3: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 9.0: 'A lady said she's a child life specialist. What does that me'
+      FK 8.7: 'Someone came in and said they're a resident. Are they living'
+
+  Latency (50 samples):
+    avg: 2.15s, min: 1.09s, max: 3.02s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 84
+    Avg tokens/second:   38.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 33/50
+

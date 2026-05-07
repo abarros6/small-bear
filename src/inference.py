@@ -40,16 +40,24 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from constants import BASE_MODEL_3B, BASE_MODEL_1B, BASE_MODEL_QWEN, BASE_MODEL_QWEN4BIT, BASE_MODEL_SMOLLM2, ROLES
+from constants import (BASE_MODEL_3B, BASE_MODEL_1B, BASE_MODEL_QWEN, BASE_MODEL_QWEN4BIT,
+                       BASE_MODEL_SMOLLM2, BASE_MODEL_QWEN25_05B, BASE_MODEL_QWEN25_15B,
+                       BASE_MODEL_QWEN25_3B, ROLES)
 
 _BASE_MODEL = {
-    "3b":                BASE_MODEL_3B,
-    "1b":                BASE_MODEL_1B,
-    "qwen":              BASE_MODEL_QWEN,
-    "qwen4bit":          BASE_MODEL_QWEN4BIT,
-    "qwen_standard":     BASE_MODEL_QWEN,
-    "qwen4bit_standard": BASE_MODEL_QWEN4BIT,
-    "smollm2":           BASE_MODEL_SMOLLM2,
+    "3b":                  BASE_MODEL_3B,
+    "1b":                  BASE_MODEL_1B,
+    "qwen":                BASE_MODEL_QWEN,
+    "qwen4bit":            BASE_MODEL_QWEN4BIT,
+    "qwen_standard":       BASE_MODEL_QWEN,
+    "qwen4bit_standard":   BASE_MODEL_QWEN4BIT,
+    "smollm2":             BASE_MODEL_SMOLLM2,
+    "qwen25_05b":          BASE_MODEL_QWEN25_05B,
+    "qwen25_15b":          BASE_MODEL_QWEN25_15B,
+    "qwen25_3b":           BASE_MODEL_QWEN25_3B,
+    "qwen25_05b_standard": BASE_MODEL_QWEN25_05B,
+    "qwen25_15b_standard": BASE_MODEL_QWEN25_15B,
+    "qwen25_3b_standard":  BASE_MODEL_QWEN25_3B,
 }
 
 ADAPTER_DIR = Path("adapters")
@@ -189,8 +197,11 @@ def main():
                         help="Load raw base model (no adapter) — for comparison")
     parser.add_argument("--role", "-r", choices=ROLES,
                         help=f"Role adapter to load: {' | '.join(ROLES)}")
-    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard", "smollm2"], default="3b",
-                        help="Base model size: 3b (default), 1b, qwen, qwen4bit, qwen_standard, qwen4bit_standard, smollm2")
+    parser.add_argument("--model-size", choices=["3b", "1b", "qwen", "qwen4bit", "qwen_standard", "qwen4bit_standard",
+                                                  "smollm2", "qwen25_05b", "qwen25_15b", "qwen25_3b",
+                                                  "qwen25_05b_standard", "qwen25_15b_standard", "qwen25_3b_standard"],
+                        default="3b",
+                        help="Base model size (default: 3b)")
     parser.add_argument("--system-prompt", "-s",
                         help="Optional system prompt (e.g. for VR deployment testing). "
                              "Omit to run without one — matching training conditions.")

@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers4_seed42_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.1, min: 3.7, max: 9.1
+    SMOG          — avg: 8.7  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.8
+    Coleman-Liau  — avg: 6.8
+    Lexical div.  — avg: 0.720  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 79
+    FK <= 7.0 target: 40/50 pass (80.0%)
+    Worst offenders:
+      FK 9.1: 'What does the person in the white coat do?'
+      FK 8.5: 'Who is the person who keeps coming to check my arm where the'
+      FK 7.8: 'Why do the nurses keep waking me up at night?'
+
+  Latency (50 samples):
+    avg: 0.92s, min: 0.55s, max: 1.62s
+    Under 1.0s target: 34/50
+    Avg tokens/response: 95
+    Avg tokens/second:   102.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 40/50
+

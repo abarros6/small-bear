@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers4_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.3, min: 3.2, max: 10.1
+    SMOG          — avg: 8.9  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.9
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.738  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 78
+    FK <= 7.0 target: 35/50 pass (70.0%)
+    Worst offenders:
+      FK 10.1: 'What does the person in the white coat do?'
+      FK 9.5: 'What is the SMILE Room?'
+      FK 9.3: 'There's a scary machine that beeps when I walk through the d'
+
+  Latency (50 samples):
+    avg: 0.92s, min: 0.53s, max: 1.81s
+    Under 1.0s target: 35/50
+    Avg tokens/response: 93
+    Avg tokens/second:   100.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 35/50
+

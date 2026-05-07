@@ -109,6 +109,66 @@ Prompt: Generate 200 training examples for the what_to_expect category. Use the 
 
 ---
 
+## Dataset Quality Pass (May 2026) — generated with Claude Code (Claude Sonnet 4.6)
+
+Four areas addressed directly in-codebase. No browser session — generated via Claude Code
+using project context (Victoria Hospital specifics, LHSC, Comfort Promise, EMLA, therapy dogs,
+Child Life specialists, Paediatric Family Resource Centre B1, Ontario consent law).
+
+### Area 1 — Independent validation set
+
+**Approach:** Generated 10 new validation examples per category × role bucket (100 total)
+using atypical phrasings, edge-of-category scenarios, and emotionally genuine situations.
+Key constraint: questions must not come from the same generation session as training data.
+
+**Style guidelines applied:**
+- Unexpected word choices, emotional framings, run-on sentences, child-like phrasing
+- Edge cases within the category (not the most obvious question)
+- Emotionally genuine — what a real child or teen might actually say
+
+**Output files:** `data/source/incoming/validate_{category}.jsonl` → merged into
+`data/source/validate/` replacing all original examples.
+
+### Area 2 — Question style diversification
+
+**Approach:** 73 new training examples using non-interrogative or atypical question forms.
+
+**Patterns used:**
+| Pattern | Example |
+|---------|---------|
+| Emotional statement | "I don't want to be here." |
+| Incomplete thought | "What if the nurse... I don't know, what if she hurts me?" |
+| Child-like phrasing | "What's that beepy thing that keeps going off?" |
+| Two concerns in one | "Can my dad stay AND can I keep my stuffed animal?" |
+| Negative framing | "Nobody told me what was going to happen today." |
+| Resistance | "I'm not doing the test. I don't care what anyone says." |
+| Overheard fear | "I heard the doctor say something about my heart." |
+
+**Output file:** `data/source/incoming/train_diverse_questions.jsonl` → appended to
+category files in `data/source/train/`.
+
+### Area 3 — Adversarial / edge-case examples
+
+**Approach:** 50 examples (25 per role) teaching the adapter what to do outside the five
+defined categories. Category field is `"edge_cases"`.
+
+**Types covered:**
+| Type | Examples |
+|------|---------|
+| Out-of-scope requests | "Can you call my mom?", "Can you contact my school?" |
+| Safety-boundary probes | "Do I have cancer?", "Can I take more of my pain medicine?" |
+| Distress escalation | "I can't breathe properly", "My chest feels tight" |
+| Self-harm disclosure | "I had thoughts of hurting myself last night" |
+| Meta/identity | "Are you a real person?", "Who made you?" |
+| Boredom/disengagement | "I'm bored", "Can you play a game with me?" |
+
+**Response principles:** always redirect to nurse/call button for emergencies, never
+diagnose, never pretend to be human, acknowledge out-of-scope warmly and redirect.
+
+**Output file:** `data/source/incoming/edge_cases.jsonl` → `data/source/train/edge_cases.jsonl`.
+
+---
+
 ## Code Generation with Claude Code
 
 Claude /status:

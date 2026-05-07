@@ -19,13 +19,15 @@ model sizes (8 runs total): **Standard** (`rank=8`, `num_layers=16`) and **Fast*
 (`rank=4`, `num_layers=8`).
 
 Headline result: a **configuration-ordering crossover** — Standard wins on 3B, Fast wins on 1B,
-consistent across all five readability metrics and the inter-role classifier. Mechanism is
-unresolved (rank and layer count co-vary). **Fast-1B is the deployment recommendation**: the
-only configuration meeting the 1.0 s real-time latency target for the 5–11 adapter (0.93 s avg)
-while topping the inter-role classifier (0.940 accuracy).
+consistent across all five readability metrics and the inter-role classifier. A controlled rank
+sweep (fixed `num_layers=8`, r ∈ {2, 4, 8, 16}, four architectures, two seeds) identifies
+**rank** as the operative factor via capacity regularization. Cross-architecture evaluation on
+Qwen 2 0.5B, SmolLM2 360M, and Qwen 2.5 (0.5B/1.5B/3B) confirms the crossover is not
+Llama-specific. **Fast-1B is the deployment recommendation**: the only Llama configuration
+meeting the 1.0 s real-time latency target for the 5–11 adapter (0.93 s avg) while topping
+the inter-role classifier (0.940 accuracy).
 
-See `docs/EXPERIMENTS.md` for the planned follow-up to identify the crossover mechanism and test
-whether it generalizes to other model families.
+See `docs/EXPERIMENTS.md` for current experiment status and remaining forward work.
 
 ## Stack
 

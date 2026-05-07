@@ -27,9 +27,8 @@ reference for results, methodology rationale, and the limitations that drive for
 Headline empirical finding from the paper: a **configuration-ordering crossover** —
 Standard ($r=8$, 16 layers) outperforms Fast on 3B; Fast ($r=4$, 8 layers) outperforms Standard
 on 1B. The reversal is consistent across all five readability metrics and the inter-role
-classifier. The mechanism is unresolved because rank and `num_layers` co-vary across the two
-configurations. See `docs/EXPERIMENTS.md` for the planned follow-up to identify which factor drives
-the crossover.
+classifier. The mechanism is resolved: rank is the dominant factor (rank sweep) and layer depth
+is an independent secondary contributor (layer sweep). See `docs/EXPERIMENTS.md` §1 for details.
 
 ## Hardware & Stack
 
@@ -40,7 +39,7 @@ the crossover.
 | Framework | MLX (Apple Silicon, on-device GPU) |
 | Base model (primary) | `mlx-community/Llama-3.2-3B-Instruct-4bit` |
 | Base model (ablation) | `mlx-community/Llama-3.2-1B-Instruct-4bit` |
-| Base model (cross-arch) | `mlx-community/Qwen2-0.5B-Instruct-4bit`, `mlx-community/SmolLM2-360M-Instruct` |
+| Base model (cross-arch) | `mlx-community/Qwen2-0.5B-Instruct-4bit`, `mlx-community/SmolLM2-360M-Instruct`, `mlx-community/Qwen2.5-{0.5,1.5,3}B-Instruct-4bit` |
 | Method | QLoRA — 4-bit quantized base, float32 LoRA adapters |
 | mlx-lm | 0.30.7 (pinned — see Known Working Versions) |
 
@@ -137,21 +136,24 @@ Do not rename source files — the mapping is handled in code.
 **No system prompt in training data.** This is a deliberate design choice — see
 "No-System-Prompt Design" section below.
 
-### Category Targets (100 examples each)
-| Role | Category (exact string in JSONL) | Target |
-|------|----------------------------------|--------|
-| age_5_11 | what_to_expect | 100 |
-| age_5_11 | who_are_these_people | 100 |
-| age_5_11 | hospital_rules_and_routines | 100 |
-| age_5_11 | emotional_reassurance | 100 |
-| age_5_11 | faqs_general_curiosity | 100 |
-| age_12_18 | what_to_expect | 100 |
-| age_12_18 | who_are_these_people | 100 |
-| age_12_18 | hospital_rules_and_routines | 100 |
-| age_12_18 | emotional_reassurance | 100 |
-| age_12_18 | faqs_general_curiosity | 100 |
+### Current Training Counts (post dataset quality pass, May 2026)
 
-Total: 1000 examples (500 per role)
+| File | Source examples | age_5_11 train | age_12_18 train |
+|------|-----------------|----------------|-----------------|
+| `edge_cases.jsonl` | 50 | 25 | 25 |
+| `emotional_reassurance.jsonl` | 225 | 110 | 115 |
+| `faqs_general_curiosity.jsonl` | 213 | 105 | 108 |
+| `hospital_rules_and_routines.jsonl` | 212 | 109 | 103 |
+| `what_to_expect.jsonl` | 218 | 109 | 109 |
+| `who_are_these_people.jsonl` | 205 | 104 | 101 |
+| **Total** | **1123** | **562** | **561** |
+
+Validation: 100 examples total (20 per category, 10 per role each). Replaced with
+independent examples in May 2026 — see `docs/EXPERIMENTS.md` §5.
+
+`edge_cases` is a sixth training-only category covering out-of-scope requests,
+safety-boundary probes, distress escalation, meta questions, and boredom/disengagement.
+It is not represented in the validation set.
 
 ## No-System-Prompt Design
 
@@ -467,6 +469,12 @@ the inter-role classifier setup are in `paper/Paper.tex` §§5–6.
 | Qwen Standard/Fast | Qwen2-0.5B-Instruct-4bit | adapters/qwen4bit_standard/{role}/, adapters/fast/qwen4bit/{role}/ |
 | SmolLM2 Standard | SmolLM2-360M-Instruct | adapters/smollm2/{role}/ |
 | SmolLM2 Fast | SmolLM2-360M-Instruct | adapters/fast/smollm2/{role}/ |
+| Qwen2.5-0.5B Standard | Qwen2.5-0.5B-Instruct-4bit | adapters/qwen25_05b_standard/{role}/ |
+| Qwen2.5-0.5B Fast | Qwen2.5-0.5B-Instruct-4bit | adapters/fast/qwen25_05b/{role}/ |
+| Qwen2.5-1.5B Standard | Qwen2.5-1.5B-Instruct-4bit | adapters/qwen25_15b_standard/{role}/ |
+| Qwen2.5-1.5B Fast | Qwen2.5-1.5B-Instruct-4bit | adapters/fast/qwen25_15b/{role}/ |
+| Qwen2.5-3B Standard | Qwen2.5-3B-Instruct-4bit | adapters/qwen25_3b_standard/{role}/ |
+| Qwen2.5-3B Fast | Qwen2.5-3B-Instruct-4bit | adapters/fast/qwen25_3b/{role}/ |
 
 **Headline metrics (5–11 group; full tables in `paper/Paper.tex` §§5–6 and `docs/RESULTS_COMPARISON.md`):**
 
@@ -476,17 +484,23 @@ the inter-role classifier setup are in `paper/Paper.tex` §§5–6.
 | Standard-1B      | 72%           | 1.09 s      | 0.890           |
 | Fast-3B          | 76%           | 2.83 s      | 0.900           |
 | Fast-1B          | 82%           | 0.93 s      | 0.940           |
-| Qwen Fast (4bit) | 68%           | **0.46 s**  | **0.960**       |
-| Qwen Std (4bit)  | 74%           | 0.59 s      | 0.940           |
-| SmolLM2 Standard | **84%**       | 0.81 s      | 0.950           |
-| SmolLM2 Fast     | 64%           | 1.08 s      | 0.920           |
-| Base-3B          | 12%           | 3.99 s      | 0.700           |
-| Base-1B          | 14%           | 2.01 s      | 0.660           |
+| Qwen Fast (4bit)      | 68%           | **0.46 s**  | 0.960           |
+| Qwen Std (4bit)       | 74%           | 0.59 s      | 0.940           |
+| SmolLM2 Standard      | **84%**       | 0.81 s      | 0.950           |
+| SmolLM2 Fast          | 64%           | 1.08 s      | 0.920           |
+| Qwen2.5-0.5B Fast     | 76%           | **0.46 s**  | 0.950           |
+| Qwen2.5-0.5B Standard | 72%           | 0.57 s      | 0.940           |
+| Qwen2.5-1.5B Fast     | 70%           | 0.98 s      | **0.980**       |
+| Qwen2.5-1.5B Standard | 48%           | 1.31 s      | 0.890           |
+| Qwen2.5-3B Fast       | 76%           | 1.89 s      | 0.970           |
+| Qwen2.5-3B Standard   | 58%           | 2.23 s      | 0.930           |
+| Base-3B               | 12%           | 3.99 s      | 0.700           |
+| Base-1B               | 14%           | 2.01 s      | 0.660           |
 
 **Key findings:**
 - **Configuration-ordering crossover**: Standard wins on 3B; Fast wins on 1B. Consistent across
-  all five readability metrics and the inter-role classifier. Mechanism unresolved (see
-  Known Gaps below).
+  all five readability metrics and the inter-role classifier. Mechanism resolved: rank is
+  dominant (rank sweep), depth is a secondary independent contributor (layer sweep).
 - **Fast-1B is the deployment recommendation**: only configuration meeting the 1.0s real-time
   latency target for the 5–11 adapter (0.93s avg, 70% under target) while topping the
   classifier and clearing the FK ≤ 7.0 bar.
@@ -497,27 +511,29 @@ the inter-role classifier setup are in `paper/Paper.tex` §§5–6.
 **Why Llama 1B (not Qwen or other small models) for the original ablation:**
 Same family as the 3B base — same tokenizer, same chat template, same `apply_chat_template`
 behaviour. Drop-in replacement. Other small models require revalidating the data pipeline.
-Forward work in `docs/EXPERIMENTS.md` §2 plans a Qwen 2.5 sweep specifically to test whether the
-crossover is Llama-specific.
+`docs/EXPERIMENTS.md` §2 documents the completed Qwen 2.5 sweep (0.5B/1.5B/3B, both configs).
 
 ### Known Gaps (paper Limitations §)
 
 Status updated after §1 rank sweep and §2 cross-architecture experiments:
 
-- **Confounded comparison — RESOLVED for rank.** A controlled rank sweep (fixed `num_layers=8`,
-  ranks 2/4/8/16, 4 models, 2 seeds) confirms **rank** as the operative variable via capacity
-  regularization. The independent effect of `num_layers` on the original Llama configurations
-  remains unquantified. (`docs/EXPERIMENTS.md` §1.)
+- **Confounded comparison — RESOLVED.** A controlled rank sweep (fixed `num_layers=8`,
+  ranks 2/4/8/16, 4 models, 2 seeds) confirms **rank** as the dominant variable via capacity
+  regularization. A subsequent layer sweep (fixed rank=4, `num_layers ∈ {4, 8, 16}`, Llama
+  1B/3B, 2 seeds) confirms depth as an independent secondary contributor: layers=16 beats
+  layers=8 by +4–7% FK at fixed rank; small models peak at layers=4. Crossover reflects
+  joint rank+depth effect. (`docs/EXPERIMENTS.md` §1.)
 - **Single-seed runs — PARTIALLY RESOLVED.** The rank sweep reports mean ± std across 2 seeds.
   The original 8 runs and the cross-architecture evals (Qwen, SmolLM2) still use seed 42 only.
 - **Standard adapter perplexity — RESOLVED.** Post-hoc `--test` pass on all 8 Llama adapters. Perplexity crossover corroborates FK crossover: Standard-3B < Fast-3B; Fast-1B < Standard-1B. Paper Table 1 updated. (`docs/EXPERIMENTS.md` §3.)
-- **Single model family — RESOLVED.** Qwen 2 0.5B and SmolLM2 360M evaluated; crossover
-  confirmed not Llama-specific. Rank sweep covers all four architectures. Qwen 2.5 family
-  and models above 3B remain untested.
+- **Single model family — RESOLVED.** Qwen 2 0.5B, SmolLM2 360M, and Qwen 2.5 (0.5B/1.5B/3B)
+  evaluated; crossover confirmed not Llama-specific. Rank sweep covers all four architectures.
+  Qwen 2.5 Fast dominates Standard uniformly across all sizes (no crossover within that family).
+  Models above 3B remain untested.
 
 ### Forward Roadmap
 
-See `docs/EXPERIMENTS.md` for current status. §1 (rank sweep) and §2 (SmolLM2, Qwen 2 0.5B)
-are complete. §3 (Standard perplexity) is complete. Remaining work: Qwen 2.5 family sweep
-(§2, not started), and longer-term items (human eval, safety eval, dataset quality pass).
+See `docs/EXPERIMENTS.md` for current status. All of §1 (rank sweep + layer sweep), §2
+(SmolLM2, Qwen 2 0.5B, Qwen 2.5 0.5B/1.5B/3B), and §3 (Standard perplexity) are complete.
+Remaining work: longer-term items only (human eval, safety eval, dataset quality pass).
 

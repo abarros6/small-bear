@@ -1,0 +1,67 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/all_qwen25_15b_fast_outputs.jsonl
+Total examples: 100
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.2, min: 2.6, max: 9.6
+    SMOG          — avg: 9.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.7
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.795  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 64
+    FK <= 7.0 target: 35/50 pass (70.0%)
+    Worst offenders:
+      FK 9.6: 'I'm hungry. When is dinner?'
+      FK 8.9: 'Why did that lady ask me to draw a picture about how I'm fee'
+      FK 8.4: 'Why do I have to wear this bracelet on my arm?'
+
+  Latency (50 samples):
+    avg: 0.98s, min: 0.41s, max: 1.75s
+    Under 1.0s target: 26/50
+    Avg tokens/response: 75
+    Avg tokens/second:   75.2
+
+----------------------------------------
+Role: age_12_18 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 10.0, min: 5.6, max: 15.4
+    SMOG          — avg: 12.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 12.1
+    Coleman-Liau  — avg: 10.4
+    Lexical div.  — avg: 0.732  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 90
+
+  Latency (50 samples):
+    avg: 1.37s, min: 0.53s, max: 2.46s
+    Under 1.0s target: 9/50
+    Avg tokens/response: 110
+    Avg tokens/second:   79.2
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_12_18/unknown: 50
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 100
+  age_5_11 FK <= 7.0: 35/50
+
+
+----------------------------------------
+Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
+----------------------------------------
+  Examples: {'age_5_11': 50, 'age_12_18': 50}
+  Accuracy: 0.980 ± 0.024
+  ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation

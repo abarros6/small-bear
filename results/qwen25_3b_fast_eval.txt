@@ -1,0 +1,67 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/all_qwen25_3b_fast_outputs.jsonl
+Total examples: 100
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.9, min: 2.7, max: 8.9
+    SMOG          — avg: 8.9  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.7
+    Coleman-Liau  — avg: 6.6
+    Lexical div.  — avg: 0.777  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 71
+    FK <= 7.0 target: 38/50 pass (76.0%)
+    Worst offenders:
+      FK 8.9: 'What's a dietitian? Somebody called a dietitian came to talk'
+      FK 8.5: 'I'm going to miss my best friend's birthday party because I''
+      FK 8.2: 'Why can't I bring my balloon into the hospital?'
+
+  Latency (50 samples):
+    avg: 1.89s, min: 0.76s, max: 3.79s
+    Under 1.0s target: 2/50
+    Avg tokens/response: 84
+    Avg tokens/second:   43.8
+
+----------------------------------------
+Role: age_12_18 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 10.4, min: 3.8, max: 16.1
+    SMOG          — avg: 12.7  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 12.8
+    Coleman-Liau  — avg: 10.9
+    Lexical div.  — avg: 0.741  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 88
+
+  Latency (50 samples):
+    avg: 2.36s, min: 1.00s, max: 3.61s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 107
+    Avg tokens/second:   45.1
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_12_18/unknown: 50
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 100
+  age_5_11 FK <= 7.0: 38/50
+
+
+----------------------------------------
+Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
+----------------------------------------
+  Examples: {'age_5_11': 50, 'age_12_18': 50}
+  Accuracy: 0.970 ± 0.040
+  ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation

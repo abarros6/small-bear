@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers8_seed42_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.3, min: 3.2, max: 9.6
+    SMOG          — avg: 8.9  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.8
+    Coleman-Liau  — avg: 7.0
+    Lexical div.  — avg: 0.755  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 72
+    FK <= 7.0 target: 34/50 pass (68.0%)
+    Worst offenders:
+      FK 9.6: 'I don't want them to look at my armband again. They keep che'
+      FK 8.9: 'I'm going to miss my best friend's birthday party because I''
+      FK 8.8: 'I can't play with the other kids because I have to stay in m'
+
+  Latency (50 samples):
+    avg: 0.93s, min: 0.58s, max: 1.57s
+    Under 1.0s target: 35/50
+    Avg tokens/response: 87
+    Avg tokens/second:   92.5
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 34/50
+

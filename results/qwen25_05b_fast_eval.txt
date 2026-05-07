@@ -1,0 +1,67 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/all_qwen25_05b_fast_outputs.jsonl
+Total examples: 100
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 5.8, min: 2.7, max: 9.0
+    SMOG          — avg: 8.6  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.4
+    Coleman-Liau  — avg: 6.4
+    Lexical div.  — avg: 0.741  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 68
+    FK <= 7.0 target: 38/50 pass (76.0%)
+    Worst offenders:
+      FK 9.0: 'Why does everyone keep washing their hands so much?'
+      FK 8.7: 'A lady said she's a child life specialist. What does that me'
+      FK 8.4: 'I don't want them to look at my armband again. They keep che'
+
+  Latency (50 samples):
+    avg: 0.46s, min: 0.25s, max: 0.85s
+    Under 1.0s target: 50/50
+    Avg tokens/response: 82
+    Avg tokens/second:   177.7
+
+----------------------------------------
+Role: age_12_18 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 9.8, min: 3.8, max: 15.7
+    SMOG          — avg: 12.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 12.0
+    Coleman-Liau  — avg: 9.9
+    Lexical div.  — avg: 0.673  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 89
+
+  Latency (50 samples):
+    avg: 0.58s, min: 0.39s, max: 1.45s
+    Under 1.0s target: 49/50
+    Avg tokens/response: 109
+    Avg tokens/second:   185.7
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_12_18/unknown: 50
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 100
+  age_5_11 FK <= 7.0: 38/50
+
+
+----------------------------------------
+Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
+----------------------------------------
+  Examples: {'age_5_11': 50, 'age_12_18': 50}
+  Accuracy: 0.950 ± 0.032
+  ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation

@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers8_seed1337_1b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.3, min: 3.5, max: 9.4
+    SMOG          — avg: 9.0  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 7.9
+    Coleman-Liau  — avg: 7.0
+    Lexical div.  — avg: 0.767  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 73
+    FK <= 7.0 target: 33/50 pass (66.0%)
+    Worst offenders:
+      FK 9.4: 'Can I go play in the hallway?'
+      FK 8.6: 'Why do the nurses keep waking me up at night?'
+      FK 8.3: 'What if the doctors can't fix me?'
+
+  Latency (50 samples):
+    avg: 0.93s, min: 0.55s, max: 1.35s
+    Under 1.0s target: 36/50
+    Avg tokens/response: 88
+    Avg tokens/second:   94.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 33/50
+

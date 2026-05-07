@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers4_seed1337_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.3, min: 2.9, max: 8.7
+    SMOG          — avg: 9.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.0
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.718  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 89
+    FK <= 7.0 target: 32/50 pass (64.0%)
+    Worst offenders:
+      FK 8.7: 'What are Bravery Beads?'
+      FK 8.6: 'Why is there a person from a pharmacy here? I thought pharma'
+      FK 8.6: 'What if the doctors can't fix me?'
+
+  Latency (50 samples):
+    avg: 2.34s, min: 0.82s, max: 6.24s
+    Under 1.0s target: 1/50
+    Avg tokens/response: 106
+    Avg tokens/second:   44.4
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 32/50
+

@@ -1,0 +1,41 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/layer_sweep_rank4_layers4_seed42_3b_age_5_11_outputs.jsonl
+Total examples: 50
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 6.6, min: 2.0, max: 10.2
+    SMOG          — avg: 9.2  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 8.3
+    Coleman-Liau  — avg: 7.1
+    Lexical div.  — avg: 0.703  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 97
+    FK <= 7.0 target: 26/50 pass (52.0%)
+    Worst offenders:
+      FK 10.2: 'Why is there a person from a pharmacy here? I thought pharma'
+      FK 10.0: 'I don't want them to look at my armband again. They keep che'
+      FK 9.6: 'Where does my food come from in the hospital?'
+
+  Latency (50 samples):
+    avg: 2.56s, min: 0.84s, max: 6.27s
+    Under 1.0s target: 1/50
+    Avg tokens/response: 117
+    Avg tokens/second:   44.6
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 50
+  age_5_11 FK <= 7.0: 26/50
+
