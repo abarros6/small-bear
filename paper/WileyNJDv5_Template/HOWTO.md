@@ -125,3 +125,11 @@ doesn't break anything.
 The authoritative instructions from Wiley are in
 `NJDv5_Authorguideline-document/Author-guideline_Wiley.pdf` — consult it for journal-specific
 requirements before submitting.
+
+
+
+add a diagram with the lora adapters and the underlying llm 
+
+add some future works statements about the size of the adapters being negligable to the underlying model so there is potential for creeating as many as we want to adapt to 
+
+what is the rouge test?

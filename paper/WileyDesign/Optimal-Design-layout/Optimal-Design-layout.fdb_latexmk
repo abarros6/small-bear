@@ -1,5 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1784084755.39696 "Optimal-Design-layout.tex" "Optimal-Design-layout.pdf" "Optimal-Design-layout" 1784084756.29589 0
+["pdflatex"] 1784155227.07924 "/Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex" "Optimal-Design-layout.pdf" "Optimal-Design-layout" 1784155228.07757 2
+  "/Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex" 1784155225.16917 59884 2f73160e4bb1697aabd83fd300f4303e ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/stix2-type1/stix2-mathbb.enc" 1610747736 2904 e0faa515d685129700e18ca6e0e2b48f ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/stix2-type1/stix2-mathcal.enc" 1610747736 3356 2818ff063f8b5d0d850e1203330b9fda ""
@@ -248,14 +249,15 @@
   "/usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1774209607 3636776 dc5fa9b6b1453b9d196cd42edf876004 ""
   "/usr/local/texlive/2026/texmf.cnf" 1774209515 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
   "NJDnatbib.sty" 1784073064.46347 46229 b23b408004050376b05f17f766e34127 ""
-  "Optimal-Design-layout.aux" 1784084756.14339 19347 e1863ddc77fbbe4880d1f593ad102ecb "pdflatex"
-  "Optimal-Design-layout.tex" 1784084536.4534 55789 d06a4f43f4ecef623416a6a3b7312e72 ""
+  "Optimal-Design-layout.aux" 1784155227.91254 21195 43f71d66173415c2fd5e8f4ccf5defb4 "pdflatex"
+  "Optimal-Design-layout.tex" 1784155225.16917 59884 2f73160e4bb1697aabd83fd300f4303e ""
   "USG.cls" 1784073064.46871 95431 0244fdb94a6bc18f048db962c353f564 ""
   "algorithm.sty" 1784073064.46884 3250 ec924db429a99ca4ed9c3769acfa5f18 ""
   "algorithmicx.sty" 1784073064.46964 26750 ce139c05a983e19ddca355b43e29c395 ""
   "amssymb.sty" 1784073064.46986 13840 8d3b8c6243767e151b5342193a010577 ""
   "images/Wiley_logo.eps" 1784073064.49918 413570 ef0fb6bc9fa87a993ec36489549c55eb ""
   "images/allergy.eps" 1784073064.50908 1473554 5474cdf595b147e9b4c229b7a46fb2dc ""
+  "images/architecture_diagram.png" 1784155204.34077 91617 012785928b20f50ba038858d86bb9570 ""
   "images/openaccess.eps" 1784073064.52274 1230946 a908289c03b32c6490d7d4f2594739db ""
   "lettersp.sty" 1784073064.463 12163 b6de1fa5e93e58dc68ba3c77a1af2e61 ""
   (generated)

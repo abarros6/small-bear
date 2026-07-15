@@ -252,7 +252,7 @@ A \textbf{configuration-ordering crossover} is visible in Table~\ref{tab:res2}: 
     Base-3B     & 12--18 & 10.6 & 12.9 & 13.3 & 11.4 & 0.565 & 206 & ---          \\
     \hline
   \end{tabular}
-\end{table*}
+\end{table}
 
 \subsection{Latency and Throughput}
 
@@ -280,7 +280,7 @@ Table~\ref{tab:res3} reports inference latency for all configurations (sequentia
     Base-3B     & 12--18 & 5.39 & 0.67 & 6.29 & 264 & 48.7  & 1/50 (2\%)   \\
     \hline
   \end{tabular}
-\end{table*}
+\end{table}
 
 \subsection{Inter-Role Style Separation}
 
@@ -501,7 +501,7 @@ This paper demonstrates that LIMA-style synthetic fine-tuning on consumer hardwa
 
 The central finding is a \textbf{configuration-ordering crossover}: Standard ($r=8$, 16 layers) outperforms Fast on the 3B model, while Fast ($r=4$, 8 layers) outperforms on 1B, consistent across all five readability metrics and the classification task. The rank sweep (Section~\ref{sec:ranksweep}) confirms \textbf{rank as the dominant factor} via capacity regularization, with transformer depth, not parameter count, predicting the optimal rank regime; the layer sweep (Section~\ref{sec:layersweep}) confirms depth as an independent secondary contributor (layers=16 beats layers=8 by 4--7\% FK at fixed rank). Cross-architecture evaluation (Qwen~2 0.5B, SmolLM2 360M, Qwen 2.5 0.5B--3B) confirms the crossover is not Llama-specific; within Qwen 2.5, Fast dominates Standard uniformly, consistent with the small-model rank regime, with Qwen 2.5 1.5B Fast achieving the highest classifier accuracy of any adapter evaluated (0.980).
 
-For deployment, Section~\ref{sec:qwen25} gives the full priority ordering across latency, quality, and style-separation trade-offs; Fast-1B remains the recommended choice for Llama-only deployments. Remaining limitations include in-distribution-only evaluation and the absence of clinical validation with pediatric patients or caregivers (Section~\ref{sec:limitations}).
+For deployment, Section~\ref{sec:qwen25} gives the full priority ordering across latency, quality, and style-separation trade-offs; Fast-1B remains the recommended choice for Llama-only deployments. Representative example outputs from the Qwen 2.5-0.5B Fast configuration are provided in the Appendix. Remaining limitations include in-distribution-only evaluation and the absence of clinical validation with pediatric patients or caregivers (Section~\ref{sec:limitations}).
 
 
 %\backmatter
@@ -579,9 +579,49 @@ section.
 %% TODO: review with colleague whether AECAI-PRiSM 2026 permits a repo link during
 %% review before restoring \url{https://github.com/abarros6/small-bear} here.
 
+\subsection{System Architecture}\label{sec:architecture}
+
+Figure~\ref{fig:architecture} illustrates the inference-time architecture: a single frozen 4-bit quantized base model shared across both age groups, with the age-gate router selecting one of two LoRA adapters per request. The adapter is applied on top of the frozen weights at inference (Section~\ref{sec:methodology}); it is never fused into the base model, which is what keeps both age registers available from one shared set of base weights.
+
+\begin{figure}[!ht]
+  \centering
+  \includegraphics[width=0.95\linewidth]{architecture_diagram}
+  \caption{Inference-time routing between the two LoRA adapters and the shared frozen base model.}
+  \label{fig:architecture}
+\end{figure}
+
 \subsection{Data Generation Provenance}
 
 All synthetic data was generated using Claude Opus 4.6 with extended thinking mode via Claude.ai Project Spaces (March 2026), with **** Hospital's publicly available patient and family guide attached as a grounding artifact in dedicated, per-category chats to maintain context isolation; the \texttt{edge\_cases} category was added in a later follow-up pass. Category definitions, per-category counts, and the hard safety rules enforced at generation time are given in Section~\ref{sec:methodology}. Training scripts and evaluation code were developed using Claude Code (claude-sonnet-4-6, v2.1.74).
+
+\subsection{Example Adapter Outputs}\label{sec:examples}
+
+Because the validation set was written before the VR-navigation query style was finalized (Section~\ref{sec:limitations}), it does not itself contain prompts framed as arising from in-VR exploration. Table~\ref{tab:examples} instead shows live-generated responses from the Qwen 2.5-0.5B Fast configuration --- one of the recommended deployment configurations (Section~\ref{sec:qwen25}) --- to newly written prompts explicitly framed in this way, illustrating the adapter's behavior in the intended deployment context. Full validation-set outputs are available from the corresponding author upon request.
+
+\begin{table}[b]
+  \centering
+  \caption{Qwen 2.5-0.5B Fast responses to newly written, VR-navigation-framed prompts.}
+  \label{tab:examples}
+  \footnotesize
+  \begin{tabular}{p{0.11\linewidth}p{0.38\linewidth}p{0.38\linewidth}}
+    \hline
+    Age / Category & Question & Response \\
+    \hline
+    5--11, What to Expect &
+    ``I'm walking around in here and I see a big room with lots of toys and games. What's that room for?'' &
+    ``That's a hospital! The big room you're seeing is called the B1-B2 Unit. It has lots of special toys and games to help kids feel more comfortable while they're in the hospital. There are also crafts, puzzles, and board games for your family to play together too!'' \\[4pt]
+    5--11, Who Are These People? &
+    ``I see a dog walking around with someone wearing a special vest. Is that dog allowed to be here?'' &
+    ``That dog is a therapy animal, and it's really important to let them do their job. The special vest you see is called a therapy vest, and it's there to help the dog feel more comfortable. The hospital or animal shelter will make sure everything is ready for you to bring your dog inside, and they'll let the therapy volunteers know when it's okay.'' \\[4pt]
+    12--18, What to Expect &
+    ``I'm looking around in here and I see a room labeled CT. What actually happens in there?'' &
+    ``The CT (Computed Tomography) in the room is a digital imaging machine. It's used to create cross-sectional images of your body --- that means it takes a series of X-rays and then processes them to create detailed images. The CT scan is one way your care team uses to diagnose conditions like fractures, infections, or certain types of cancer. It's a quick and painless procedure that can be done in the hospital or at home with your parent. If you're having a hard time finding it, ask your nurse to point it out or check with the IT staff.'' \\[4pt]
+    12--18, Emotional Reassurance &
+    ``Looking around at all this before my actual visit is making my anxiety worse, not better.'' &
+    ``That's a lot of stress. You're right --- anxiety is real, and it can be hard to manage when you feel like your body's telling you something. But the hospital is a real place, and it might be worth going through this experience with you. You can talk to your care team about what they'd like and need from the visit, or ask for a distraction. You don't have to go through this alone --- your care team can help you feel less anxious about the process.'' \\
+    \hline
+  \end{tabular}
+\end{table}
 
 \nocite{*}% Show all bib entries - both cited and uncited; comment this line to view only cited bib entries;
 
