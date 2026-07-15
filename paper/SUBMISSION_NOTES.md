@@ -11,16 +11,19 @@ Deadline: **July 16, 2026** (CMT submission).
 ## TODO before submitting
 
 ### Must fix — currently blank or placeholder
-- [ ] `\editor{\textbf{Academic Editor:} \textbf{Guest Editor:} }` — empty fields, may need to stay blank until assigned, confirm with CfP/CMT instructions
-- [ ] `\received{}` / `\revised{}` / `\accepted{}` — empty (normal pre-acceptance, but confirm CMT doesn't want anything here)
-- [ ] `\journal{AE-CAI-PRiSM 2026?}` — stray `?`, confirm exact workshop/journal name string to print
-- [ ] `\volume{}` / `\copyyear{}` / `\articledoi{}` / `\subarticletype{}` — all empty
-- [ ] `\keywords{keywords here}` / `\transkeywords{keywords here}` — literal placeholder text, needs real keywords
-- [ ] `\fundingInfo{}` — empty, confirm if you have funding to disclose
-- [ ] **Copyright/license block** (right after `\dedicated{}`) — currently says *"© 2024 The Author(s) AIChE Journal published by Wiley Periodicals LLC on behalf of American Institute of Chemical Engineers"* — this is leftover boilerplate from a totally different Wiley journal (AIChE Journal, not HTL/AECAI-PRiSM). There's a literal comment above it: `%FOR THE LOVE OF GOD MAKE SURE THE ABOVE IS OKAY AND CORRECT` — someone already flagged this and it's still wrong. **Fix before submitting.**
-- [ ] **Repository link in Appendix** (`https://github.com/abarros6/small-bear`) — contains your GitHub username. If this needs to stay a blind submission, this link deanonymizes you. Either remove it for the submission copy or confirm the venue allows a repo link in blind review.
+- [x] `\editor{\textbf{Academic Editor:} \textbf{Guest Editor:} }` — left blank intentionally; normal pre-acceptance, confirm with CfP/CMT instructions if time allows
+- [x] `\received{}` / `\revised{}` / `\accepted{}` — left blank intentionally (normal pre-acceptance)
+- [x] `\journal{AE-CAI-PRiSM 2026?}` — fixed to `\journal{AECAI-PRiSM 2026}` (stray `?` dropped)
+- [x] `\volume{}` / `\copyyear{}` / `\articledoi{}` / `\subarticletype{}` — left blank intentionally (normal pre-acceptance)
+- [x] `\keywords{}` / `\transkeywords{}` — filled with: parameter-efficient fine-tuning, low-rank adaptation, pediatric clinical NLP, virtual reality, on-device inference, small language models. Revise if you want different terms.
+- [x] `\fundingInfo{}` — set to "No funding to disclose."
+- [x] **Copyright/license block** — the stray AIChE Journal boilerplate is removed; now reads a generic "© 2026 The Author(s)." under the same CC BY-NC statement. Revisit once the actual venue copyright text is known.
+- [x] **Repository link in Appendix** — removed for this submission (double-blind risk). Replaced with a commented-out TODO to review with your colleague whether AECAI-PRiSM 2026 allows a repo link during review before restoring it.
 
 ### Worth a second look
+- [ ] "Dr. Beary Good" was corrected to "Dr. Beary Goode" in `Optimal-Design-layout.tex` and `paper/Paper.tex` only. README, CLAUDE.md, docs/, src/, and the training data itself (`data/source/*.jsonl`) still say "Good" — left untouched since the adapters were trained on that name and repo-wide rename would need a data/retrain pass.
+- [ ] Prose em dashes ("---") were rewritten to commas/colons/semicolons throughout `Optimal-Design-layout.tex` (the submission copy) to read less like LLM-generated text. `paper/Paper.tex` (36 remaining) was not touched — confirm whether that file still matters given `Optimal-Design-layout.tex` is canonical for submission, since CLAUDE.md still calls `Paper.tex` the canonical reference.
+- [ ] No LaTeX toolchain (pdflatex/latexmk) is installed on this machine, so none of the above edits have been recompiled/verified against a fresh PDF. Compile before submitting to confirm no errors.
 - [ ] Author Contributions / Acknowledgments currently read `[withheld for double-blind review]` — fine for now, but you'll need real text if/when you de-anonymize post-acceptance
 - [ ] `docs/dataset_creation_prompts.md` describes a "v2" dataset regeneration (VR-navigation-framed questions, `claude-opus-4-7`, explicit voice rules) that — based on file timestamps — **has not actually been run yet**. The paper's Dataset/Methodology sections still correctly describe the *current* on-disk data. If you run that regeneration before submitting, the paper will need another numbers pass.
 - [ ] `WileyNJDv5_Template/wileyNJDv5_AMA.tex` (the other, single-column template) received the same content fixes earlier in this session and is fully functional at 12 pages, but is **not** what you're submitting — it's now a stale fork. Fine to ignore/delete, just don't let it confuse future edits.
