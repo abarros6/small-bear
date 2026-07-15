@@ -28,16 +28,16 @@
 
 
 \begin{document}
-\title{Language-based Augmentation of a Virtual Clinical Environment with LoRA parameter Fine-Tuning}
+\title{Language-based Augmentation of a Virtual Clinical Avatar with LoRA parameter Fine-Tuning}
 %\subtitle{Subtitle}
-\transtitle{Language-based Augmentation of a Virtual Clinical Environment with LoRA parameter Fine-Tuning}
+\transtitle{Language-based Augmentation of a Virtual Clinical Avatar with LoRA parameter Fine-Tuning}
 \subtranstitle{}
 \author[1]{Anonymous Author 1}
 
 \author[1]{Anonymous Author 2}
 
 \authormark{Anonymous \textsc{et al.}}
-\titlemark{Language-based Augmentation of a Virtual Clinical Environment with LoRA parameter Fine-Tuning}
+\titlemark{Language-based Augmentation of a Virtual Clinical Avatar with LoRA parameter Fine-Tuning}
 
 \address[1]{\orgdiv{Department withheld for review, }\orgname{Institution withheld for review, }%
 \orgaddress{\state{State/Province withheld, }\country{Country withheld}}}
@@ -83,7 +83,7 @@ original~work~is~properly cited and is not used for commercial purposes.
 
 {L}{arge} language models (LLMs) have created new opportunities for domain-specific conversational systems, but deploying them in resource-constrained clinical environments introduces practical constraints that are rarely addressed together: limited memory budgets favor smaller models, domain adaptation requires fine-tuning on specialized data, and real-time interaction imposes strict latency bounds.
 
-This paper presents \textit{Dr. Beary Goode}, an age-targeted conversational guide embedded in a virtual recreation of **** Hospital (Location withheld for anonymity). The system provides age-appropriate hospital information to two patient groups: children aged 5--11 and adolescents aged 12--18, via natural language interaction within a VR environment. All training and inference runs on an Apple Mac Mini M4 (16~GB), a deliberate constraint representing deployment on consumer hardware without cloud infrastructure.
+This paper presents \textit{VR Hospital Avatar}, an age-targeted conversational guide embedded in a virtual recreation of **** Hospital (Location withheld for anonymity). The system provides age-appropriate hospital information to two patient groups: children aged 5--11 and adolescents aged 12--18, via natural language interaction within a VR environment. All training and inference runs on an Apple Mac Mini M4 (16~GB), a deliberate constraint representing deployment on consumer hardware without cloud infrastructure.
 
 To specialize the system for each age group within this memory budget, we fine-tune Llama 3.2 Instruct models \cite{dubey2024llama3} at 1B and 3B scales using Low-Rank Adaptation (LoRA) \cite{hu2022lora}. Training data is generated synthetically following the LIMA hypothesis \cite{zhou2023lima}: approximately 560 training examples per adapter (1123 total across six topic categories) grounded in **** Hospital's public patient and family materials, rather than a large noisy corpus. We compare two adapter configurations (Standard: $r = 8$, 16 adapted layers; Fast: $r = 4$, 8 adapted layers) across both model sizes and age groups for eight total training runs.
 
@@ -116,7 +116,7 @@ A recurring constraint in clinical NLP is the unavailability of naturalistic pat
 
 VR-based interventions demonstrably reduce procedural pain and anxiety in pediatric patients, from preoperative preparation to bedside procedures. Existing deployments, however, are largely passive: scripted or pre-rendered distraction content that does not respond to patient queries or adapt to developmental stage, despite hospitalized children frequently having unanswered questions about their environment, staff, and upcoming procedures.
 
-Our work addresses this gap by integrating age-targeted fine-tuned adapters into an interactive VR environment. Unlike passive distraction systems, \textit{Dr. Beary Goode} responds to patient-initiated queries calibrated to the child's developmental stage, combining the anxiety-reduction potential of immersive VR with the informational utility of a conversational agent grounded in hospital-specific knowledge.
+Our work addresses this gap by integrating age-targeted fine-tuned adapters into an interactive VR environment. Unlike passive distraction systems, \textit{VR Hospital Avatar} responds to patient-initiated queries calibrated to the child's developmental stage, combining the anxiety-reduction potential of immersive VR with the informational utility of a conversational agent grounded in hospital-specific knowledge.
 
 \section{Dataset}\label{sec3}
 
@@ -491,7 +491,7 @@ The rank sweep held \texttt{num\_layers} fixed at 8 to isolate rank, confirming 
 
 \textbf{Synthetic data and in-distribution evaluation.} Training and validation data share the same generative process and topic distribution, so perplexity measures in-distribution coherence only. Human-written references and external evaluators are needed to confirm genuinely age-appropriate output rather than learned stylistic imitation.
 
-\textbf{No clinical validation.} The system has not been tested with pediatric patients, caregivers, or clinical staff. \textit{Dr. Beary Goode} is a research prototype requiring clinical usability studies and institutional review before deployment.
+\textbf{No clinical validation.} The system has not been tested with pediatric patients, caregivers, or clinical staff. \textit{VR Hospital Avatar} is a research prototype requiring clinical usability studies and institutional review before deployment.
 
 \textbf{Safety evaluation.} No automated safety evaluation was performed. A guard model for output filtering is planned for future deployment; the current system relies on the Llama 3.2 Instruct base model's safety alignment and the safety constraints enforced at data generation time.
 
@@ -564,7 +564,7 @@ F.~Pedregosa et al., ``Scikit-learn: Machine Learning in Python,'' \textit{J. Ma
 L.~B. Allal et al., ``SmolLM2: When Smol Goes Big,'' \textit{arXiv preprint arXiv:2502.05737}, Hugging Face, 2025.
 
 \bibitem{hospitalguide}
-“Children's Hospital Patient and Family Guide,” Children's Hospital London Health Sciences Centre. https://www.lhsc.on.ca/childrens-hospital/childrens-hospital-patient-and-family-guide (accessed Mar. 26, 2026).
+“Children's Hospital Patient and Family Guide,” Children's Hospital **** Health Sciences Centre. https://www.****/childrens-hospital/childrens-hospital-patient-and-family-guide (accessed Mar. 26, 2026).
 
 \end{thebibliography}
 
