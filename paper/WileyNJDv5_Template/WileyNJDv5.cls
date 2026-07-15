@@ -353,7 +353,7 @@
 \LoadClass[twoside,fleqn,onecolumn]{article}%
 
 \usepackage{etex}%
-\reserveinserts{28}% included etex package and \reserveinserts{...} to avoid no room for \newinserts, \newcounts or \newskips etc.
+\ifdefined\reserveinserts\reserveinserts{28}\fi% modern pdftex has etex built in; etex.sty no-ops and leaves \reserveinserts undefined
 \RequirePackage{graphicx,multicol}%
 \RequirePackage{multirow}%
 \RequirePackage{cuted}%
