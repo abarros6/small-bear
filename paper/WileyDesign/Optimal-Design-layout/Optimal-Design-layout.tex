@@ -3,6 +3,7 @@
 
 \usepackage{colortbl}   % For coloring table lines
 \usepackage{xcolor}     % For color definitions
+\usepackage{placeins}   % For \FloatBarrier
 
 \usepackage{steinmetz}
 \graphicspath{{./images/}}
@@ -145,7 +146,7 @@ In addition to this, when using a system prompt, we risk the model simply learni
 
 \subsection{System Overview}
 
-This work extends a virtual hospital framework for safe, naturalistic communication between pediatric patients, caregivers, and clinical decision-makers. The platform instantiates a digital recreation of **** Hospital (Location witheld) in which users interact with an AI-powered guide, routed to one of two age-targeted response modules (5--11 or 12--18) determined by the established user profile. Emotional-support queries are in scope only as age-appropriate reassurance and redirection; clinical assessment and crisis intervention are explicitly out of scope. No system prompt is used: the adapter weights encode the age-appropriate register directly, avoiding conflicts with the VR application's own navigation system prompt. In this system, the adapters used are never fused into the model, as to not pollute the model, and to keep what the adapters have learned separate.  
+This work extends a virtual hospital framework for safe, naturalistic communication between pediatric patients, caregivers, and clinical decision-makers. The platform instantiates a digital recreation of **** Hospital (Location witheld) in which users interact with an AI-powered guide, routed to one of two age-targeted response modules (5--11 or 12--18) determined by the established user profile. Emotional-support queries are in scope only as age-appropriate reassurance and redirection; clinical assessment and crisis intervention are explicitly out of scope. No system prompt is used: the adapter weights encode the age-appropriate register directly, avoiding conflicts with the VR application's own navigation system prompt. In this system, the adapters used are never fused into the model, as to not pollute the model, and to keep what the adapters have learned separate.
 
 \subsection{Base Models and Infrastructure}
 
@@ -187,7 +188,7 @@ Each adapter serves a single age group, with approximately 560 training examples
 
 \subsection{Training Protocol}
 
-Adapters are trained using the Adam optimizer with a cosine decay learning rate schedule: peak learning rate $1 \times 10^{-5}$, linear warmup over the first 100 steps, decaying to zero over 600 total steps. Batch size is 4; maximum sequence length is 768 tokens; LoRA dropout is 0.0. Loss is computed only over assistant response tokens (\texttt{mask\_prompt: true}). With approximately 560 training examples and batch size 4, 600 steps corresponds to approximately 4 passes over the training data. Both configurations are trained across both model sizes and both age groups, yielding 8 total runs (2 configurations $\times$ 2 model sizes $\times$ 2 age groups), all using seed 42. Important to note is that while fine-tuning is training, not all training is fine-tuning. Here, only the weights of the adapters are being changed, while the weights of the shared base model are kept frozen. 
+Adapters are trained using the Adam optimizer with a cosine decay learning rate schedule: peak learning rate $1 \times 10^{-5}$, linear warmup over the first 100 steps, decaying to zero over 600 total steps. Batch size is 4; maximum sequence length is 768 tokens; LoRA dropout is 0.0. Loss is computed only over assistant response tokens (\texttt{mask\_prompt: true}). With approximately 560 training examples and batch size 4, 600 steps corresponds to approximately 4 passes over the training data. Both configurations are trained across both model sizes and both age groups, yielding 8 total runs (2 configurations $\times$ 2 model sizes $\times$ 2 age groups), all using seed 42.
 
 \subsection{Evaluation Framework}
 
@@ -203,26 +204,44 @@ Table~\ref{tab:res1} reports post-hoc validation perplexity for all eight Llama 
 
 The perplexity results mirror the configuration-ordering crossover observed in readability. For the 3B base model, Standard achieves lower perplexity than Fast on both age groups (5--11: 18.17 vs.\ 20.77; 12--18: 16.95 vs.\ 21.61), indicating a better-fit adapter. For the 1B base model, the ordering reverses: Fast achieves lower perplexity than Standard (5--11: 22.32 vs.\ 24.17; 12--18: 19.79 vs.\ 22.31). This corroborates the FK $\leq 7.0$ pass-rate crossover and strengthens the capacity-regularization interpretation: Standard (higher rank) overfits relative to the 1B model's capacity, while Fast (lower rank) underfits relative to the 3B model.
 
-\begin{table}[!t]
+\begin{table*}[!t]
   \centering
-  \caption{Validation perplexity at step 600 for all Llama adapter configurations (post-hoc full-sequence loss pass).}
+  \caption{Validation perplexity at step 600 (post-hoc full-sequence loss pass) and inter-role classifier accuracy (5-fold CV; chance~=~0.50).}
   \label{tab:res1}
-  \small
-  \begin{tabular}{llcc}
-    \hline
-    Config. & Age & Val Loss & PPL \\
-    \hline
-    Standard-3B & 5--11  & 2.900 & 18.17 \\
-    Standard-3B & 12--18 & 2.830 & 16.95 \\
-    Standard-1B & 5--11  & 3.185 & 24.17 \\
-    Standard-1B & 12--18 & 3.105 & 22.31 \\
-    Fast-3B     & 5--11  & 3.034 & 20.77 \\
-    Fast-3B     & 12--18 & 3.073 & 21.61 \\
-    Fast-1B     & 5--11  & 3.106 & 22.32 \\
-    Fast-1B     & 12--18 & 2.985 & 19.79 \\
-    \hline
-  \end{tabular}
-\end{table}
+  \footnotesize
+  \begin{minipage}[t]{0.5\linewidth}
+    \centering
+    \begin{tabular}{llcc}
+      \hline
+      Config. & Age & Val Loss & PPL \\
+      \hline
+      Std-3B & 5--11  & 2.900 & 18.17 \\
+      Std-3B & 12--18 & 2.830 & 16.95 \\
+      Std-1B & 5--11  & 3.185 & 24.17 \\
+      Std-1B & 12--18 & 3.105 & 22.31 \\
+      Fast-3B & 5--11  & 3.034 & 20.77 \\
+      Fast-3B & 12--18 & 3.073 & 21.61 \\
+      Fast-1B & 5--11  & 3.106 & 22.32 \\
+      Fast-1B & 12--18 & 2.985 & 19.79 \\
+      \hline
+    \end{tabular}
+  \end{minipage}%
+  \begin{minipage}[t]{0.5\linewidth}
+    \centering
+    \begin{tabular}{lc}
+      \hline
+      Configuration & Accuracy \\
+      \hline
+      Standard-1B & $0.890 \pm 0.102$ \\
+      Standard-3B & $0.920 \pm 0.051$ \\
+      Fast-1B     & $0.940 \pm 0.073$ \\
+      Fast-3B     & $0.900 \pm 0.077$ \\
+      Base-1B     & $0.660 \pm 0.097$ \\
+      Base-3B     & $0.700 \pm 0.063$ \\
+      \hline
+    \end{tabular}
+  \end{minipage}
+\end{table*}
 
 \subsection{Readability}
 
@@ -252,7 +271,7 @@ A \textbf{configuration-ordering crossover} is visible in Table~\ref{tab:res2}: 
     Base-3B     & 12--18 & 10.6 & 12.9 & 13.3 & 11.4 & 0.565 & 206 & ---          \\
     \hline
   \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Latency and Throughput}
 
@@ -280,30 +299,11 @@ Table~\ref{tab:res3} reports inference latency for all configurations (sequentia
     Base-3B     & 12--18 & 5.39 & 0.67 & 6.29 & 264 & 48.7  & 1/50 (2\%)   \\
     \hline
   \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Inter-Role Style Separation}
 
-Table~\ref{tab:res4} reports TF-IDF + logistic regression classification accuracy (5-fold CV; chance = 0.50) for distinguishing 5--11 vs.\ 12--18 adapter outputs. All fine-tuned configurations achieve strong separation (0.89--0.94); base models reach only moderate separation (0.66--0.70), confirming that fine-tuning is the primary driver of distinct age registers. The same crossover observed in readability is present here: Standard-3B outperforms Standard-1B (0.920 vs.\ 0.890), while Fast-1B outperforms Fast-3B (0.940 vs.\ 0.900).
-
-\begin{table}[!t]
-  \centering
-  \caption{Inter-role TF-IDF + LR classification accuracy (5-fold CV; chance = 0.50).}
-  \label{tab:res4}
-  \small
-  \begin{tabular}{lc}
-    \hline
-    Configuration & Classification Accuracy \\
-    \hline
-    Standard-1B & $0.890 \pm 0.102$ \\
-    Standard-3B & $0.920 \pm 0.051$ \\
-    Fast-1B     & $0.940 \pm 0.073$ \\
-    Fast-3B     & $0.900 \pm 0.077$ \\
-    Base-1B     & $0.660 \pm 0.097$ \\
-    Base-3B     & $0.700 \pm 0.063$ \\
-    \hline
-  \end{tabular}
-\end{table}
+The right-hand side of Table~\ref{tab:res1} reports TF-IDF + logistic regression classification accuracy (5-fold CV; chance = 0.50) for distinguishing 5--11 vs.\ 12--18 adapter outputs. All fine-tuned configurations achieve strong separation (0.89--0.94); base models reach only moderate separation (0.66--0.70), confirming that fine-tuning is the primary driver of distinct age registers. The same crossover observed in readability is present here: Standard-3B outperforms Standard-1B (0.920 vs.\ 0.890), while Fast-1B outperforms Fast-3B (0.940 vs.\ 0.900).
 
 
 \subsection{Discussion}
@@ -354,7 +354,7 @@ Notably, SmolLM2~360M falls in the large-model regime despite having fewer total
 
 To test whether the crossover generalizes beyond Llama, we evaluate Qwen~2 0.5B (4-bit quantized, ChatML template) and SmolLM2 360M \cite{allal2025smollm2} (4-bit quantized, ChatML template) under the Standard ($r=8$, \texttt{num\_layers~=~16}) and Fast ($r=4$, \texttt{num\_layers~=~8}) configurations, both age groups, seed 42. SmolLM2's chat template injects a default system message when no system role is present; training data was generated with empty-content system messages to suppress this, and inference uses a matching empty system context to maintain consistency with training conditions.
 
-Tables~\ref{tab:crossarch} and~\ref{tab:crossarchclf} summarize readability, latency, and classifier results. Several findings follow:
+Table~\ref{tab:crossarch} summarizes readability, latency, and classifier results. Several findings follow:
 
 \textbf{Qwen 0.5B: Standard wins on FK, Fast wins on classifier.} This split is resolved by the rank sweep (Table~\ref{tab:ranksweep}): Qwen's monotonically decreasing rank curve places it in the small-model regime. Both configurations clear the 1.0s latency target (100\% and 98\% of age~5--11 responses, respectively) due to high token throughput ($\sim$175 tok/s).
 
@@ -362,43 +362,26 @@ Tables~\ref{tab:crossarch} and~\ref{tab:crossarchclf} summarize readability, lat
 
 This raises four viable deployment candidates spanning the latency-quality trade-off; the full ordering, updated after the Qwen 2.5 sweep, is given at the end of Section~\ref{sec:qwen25}.
 
-\begin{table}[!t]
+\begin{table*}[!t]
   \centering
-  \caption{Cross-architecture readability and latency for the age~5--11 role (50 examples, seed 42).}
+  \caption{Cross-architecture readability, latency, and classifier accuracy for the age~5--11 role (50 examples, seed 42; classifier is 5-fold CV, chance~=~0.50).}
   \label{tab:crossarch}
-  \small
+  \footnotesize
   \begin{tabular}{llccccc}
     \hline
-    Config. & FK & FK $\leq$7.0 & Avg Lat. & $<$1.0s & Avg Tok \\
+    Config. & FK & FK $\leq$7.0 & Avg Lat. & $<$1.0s & Avg Tok & Classifier \\
     \hline
-    Qwen Std.    & 6.2 & 37/50 (74\%) & 0.59\,s & 50/50 (100\%) & 88 \\
-    Qwen Fast    & 5.8 & 34/50 (68\%) & 0.46\,s & 49/50 (98\%)  & 83 \\
-    SmolLM2 Std. & 5.8 & 42/50 (84\%) & 0.81\,s & 44/50 (88\%)  & 76 \\
-    SmolLM2 Fast & 6.1 & 32/50 (64\%) & 1.08\,s & 34/50 (68\%)  & 111 \\
-    \hline
-  \end{tabular}
-\end{table}
-
-\begin{table}[!t]
-  \centering
-  \caption{Inter-role classifier accuracy for cross-architecture configurations (5-fold CV; chance~=~0.50).}
-  \label{tab:crossarchclf}
-  \small
-  \begin{tabular}{lc}
-    \hline
-    Configuration    & Accuracy \\
-    \hline
-    Qwen Standard    & $0.940 \pm 0.049$ \\
-    Qwen Fast        & $0.960 \pm 0.058$ \\
-    SmolLM2 Standard & $0.950 \pm 0.032$ \\
-    SmolLM2 Fast     & $0.920 \pm 0.040$ \\
+    Qwen Std.    & 6.2 & 37/50 (74\%) & 0.59\,s & 50/50 (100\%) & 88  & $0.940 \pm 0.049$ \\
+    Qwen Fast    & 5.8 & 34/50 (68\%) & 0.46\,s & 49/50 (98\%)  & 83  & $0.960 \pm 0.058$ \\
+    SmolLM2 Std. & 5.8 & 42/50 (84\%) & 0.81\,s & 44/50 (88\%)  & 76  & $0.950 \pm 0.032$ \\
+    SmolLM2 Fast & 6.1 & 32/50 (64\%) & 1.08\,s & 34/50 (68\%)  & 111 & $0.920 \pm 0.040$ \\
     \hline
   \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Qwen 2.5 Family Sweep}\label{sec:qwen25}
 
-To test whether the rank regime prediction extends across a capacity ladder within a single family, we trained and evaluated the Qwen 2.5 Instruct family at 0.5B, 1.5B, and 3B under both Standard ($r=8$, \texttt{num\_layers~=~16}) and Fast ($r=4$, \texttt{num\_layers~=~8}) configurations, both age groups, seed 42. This yields 12 training runs. Results are reported in Tables~\ref{tab:qwen25} and~\ref{tab:qwen25clf}.
+To test whether the rank regime prediction extends across a capacity ladder within a single family, we trained and evaluated the Qwen 2.5 Instruct family at 0.5B, 1.5B, and 3B under both Standard ($r=8$, \texttt{num\_layers~=~16}) and Fast ($r=4$, \texttt{num\_layers~=~8}) configurations, both age groups, seed 42. This yields 12 training runs. Results are reported in Table~\ref{tab:qwen25}.
 
 \textbf{Fast outperforms Standard at every size; no crossover.} FK $\leq$ 7.0 pass rates are 76\% vs.\ 72\% (0.5B), 70\% vs.\ 48\% (1.5B), and 76\% vs.\ 58\% (3B) for Fast vs.\ Standard, respectively. This contrasts with the Llama results, where Standard wins on the 3B model. The uniform Fast advantage is consistent with the rank sweep placing Qwen in the small-model regime (peak FK at $r=2$): Standard ($r=8$) is over-parameterized across the entire Qwen 2.5 capacity ladder. The Standard penalty worsens with size: the 1.5B Standard achieves only 48\% FK pass rate, the weakest result of any fine-tuned adapter in this evaluation.
 
@@ -414,43 +397,24 @@ To test whether the rank regime prediction extends across a capacity ladder with
     \item \textit{Llama-only deployment:} Fast-1B (0.93\,s avg; 82\% FK; 0.940 classifier).
 \end{itemize}
 
-\begin{table}[!t]
+\begin{table*}[!t]
   \centering
-  \caption{Qwen 2.5 family readability and latency for the age~5--11 role (50 examples, seed 42).}
+  \caption{Qwen 2.5 family readability, latency, and classifier accuracy for the age~5--11 role (50 examples, seed 42; classifier is 5-fold CV, chance~=~0.50).}
   \label{tab:qwen25}
-  \small
-  \begin{tabular}{lccccc}
+  \footnotesize
+  \begin{tabular}{lcccccc}
     \hline
-    Config. & FK & FK $\leq$7.0 & Avg Lat. & $<$1.0s & Tok/s \\
+    Config. & FK & FK $\leq$7.0 & Avg Lat. & $<$1.0s & Tok/s & Classifier \\
     \hline
-    Qwen2.5-0.5B Fast & 5.8 & 38/50 (76\%) & 0.46\,s & 50/50 (100\%) & 177.7 \\
-    Qwen2.5-0.5B Std. & 6.1 & 36/50 (72\%) & 0.57\,s & 50/50 (100\%) & 151.8 \\
-    Qwen2.5-1.5B Fast & 6.2 & 35/50 (70\%) & 0.98\,s & 26/50 (52\%)  & 75.2  \\
-    Qwen2.5-1.5B Std. & 7.0 & 24/50 (48\%) & 1.31\,s & 6/50 (12\%)   & 68.2  \\
-    Qwen2.5-3B Fast   & 5.9 & 38/50 (76\%) & 1.89\,s & 2/50 (4\%)    & 43.8  \\
-    Qwen2.5-3B Std.   & 6.8 & 29/50 (58\%) & 2.23\,s & 0/50 (0\%)    & 40.1  \\
-    \hline
-  \end{tabular}
-\end{table}
-
-\begin{table}[!t]
-  \centering
-  \caption{Inter-role classifier accuracy for Qwen 2.5 configurations (5-fold CV; chance~=~0.50).}
-  \label{tab:qwen25clf}
-  \small
-  \begin{tabular}{lc}
-    \hline
-    Configuration     & Accuracy \\
-    \hline
-    Qwen2.5-0.5B Fast & $0.950 \pm 0.032$ \\
-    Qwen2.5-0.5B Std. & $0.940 \pm 0.097$ \\
-    Qwen2.5-1.5B Fast & $\mathbf{0.980 \pm 0.024}$ \\
-    Qwen2.5-1.5B Std. & $0.890 \pm 0.073$ \\
-    Qwen2.5-3B Fast   & $0.970 \pm 0.040$ \\
-    Qwen2.5-3B Std.   & $0.930 \pm 0.068$ \\
+    Qwen2.5-0.5B Fast & 5.8 & 38/50 (76\%) & 0.46\,s & 50/50 (100\%) & 177.7 & $0.950 \pm 0.032$ \\
+    Qwen2.5-0.5B Std. & 6.1 & 36/50 (72\%) & 0.57\,s & 50/50 (100\%) & 151.8 & $0.940 \pm 0.097$ \\
+    Qwen2.5-1.5B Fast & 6.2 & 35/50 (70\%) & 0.98\,s & 26/50 (52\%)  & 75.2  & $\mathbf{0.980 \pm 0.024}$ \\
+    Qwen2.5-1.5B Std. & 7.0 & 24/50 (48\%) & 1.31\,s & 6/50 (12\%)   & 68.2  & $0.890 \pm 0.073$ \\
+    Qwen2.5-3B Fast   & 5.9 & 38/50 (76\%) & 1.89\,s & 2/50 (4\%)    & 43.8  & $0.970 \pm 0.040$ \\
+    Qwen2.5-3B Std.   & 6.8 & 29/50 (58\%) & 2.23\,s & 0/50 (0\%)    & 40.1  & $0.930 \pm 0.068$ \\
     \hline
   \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Layer Sweep: Independent Effect of \texttt{num\_layers}}\label{sec:layersweep}
 
@@ -522,6 +486,32 @@ The authors declare no conflicts of interest.
 
 %\bibliography{wileyNJD-Chicago}
 
+% Appendix example table: float source placed here so it can be laid out on the
+% final page; counter set so it numbers as appendix Table 1.
+\setcounter{table}{0}
+\begin{table*}[!b]
+  \centering
+  \caption{Example Qwen 2.5-0.5B Fast responses for both age groups.}
+  \label{tab:examples}
+  \footnotesize
+  \begin{tabular}{p{0.16\linewidth}p{0.38\linewidth}p{0.40\linewidth}}
+    \hline
+    Age / Cat. & Question & Response \\
+    \hline
+    5--11, What to Expect &
+    ``I'm walking around in here and I see a big room with lots of toys and games. What's that room for?'' &
+    ``That's a hospital! The big room you're seeing is called the B1-B2 Unit. It has lots of special toys and games to help kids feel more comfortable while they're in the hospital. There are also crafts, puzzles, and board games for your family to play together too!'' \\
+    5--11, Who Are These People? &
+    ``I see a dog walking around with someone wearing a special vest. Is that dog allowed to be here?'' &
+    ``That dog is a therapy animal, and it's really important to let them do their job. The special vest you see is called a therapy vest, and it's there to help the dog feel more comfortable. The hospital or animal shelter will make sure everything is ready for you to bring your dog inside, and they'll let the therapy volunteers know when it's okay.'' \\
+    12--18, Emotional Reassurance &
+    ``Looking around at all this before my actual visit is making my anxiety worse, not better.'' &
+    ``That's a lot of stress. You're right --- anxiety is real, and it can be hard to manage when you feel like your body's telling you something. But the hospital is a real place, and it might be worth going through this experience with you. You can talk to your care team about what they'd like and need from the visit, or ask for a distraction. You don't have to go through this alone --- your care team can help you feel less anxious about the process.'' \\
+    \hline
+  \end{tabular}
+\end{table*}
+\setcounter{table}{7}
+
 \begin{thebibliography}{99}
 
 \bibitem{zhou2023lima}
@@ -568,11 +558,6 @@ L.~B. Allal et al., ``SmolLM2: When Smol Goes Big,'' \textit{arXiv preprint arXi
 
 \end{thebibliography}
 
-\bmsubsection*{Supporting Information}
-
-Additional supporting information can be found online in the Supporting Information
-section.
-
 \appendix
 
 %% Repository link removed for double-blind review (deanonymizes via GitHub username).
@@ -585,7 +570,7 @@ Figure~\ref{fig:architecture} illustrates the inference-time architecture: a sin
 
 \begin{figure}[!ht]
   \centering
-  \includegraphics[width=0.95\linewidth]{architecture_diagram}
+  \includegraphics[width=0.8\linewidth]{architecture_diagram}
   \caption{Inference-time routing between the two LoRA adapters and the shared frozen base model.}
   \label{fig:architecture}
 \end{figure}
@@ -596,32 +581,7 @@ All synthetic data was generated using Claude Opus 4.6 with extended thinking mo
 
 \subsection{Example Adapter Outputs}\label{sec:examples}
 
-Because the validation set was written before the VR-navigation query style was finalized (Section~\ref{sec:limitations}), it does not itself contain prompts framed as arising from in-VR exploration. Table~\ref{tab:examples} instead shows live-generated responses from the Qwen 2.5-0.5B Fast configuration --- one of the recommended deployment configurations (Section~\ref{sec:qwen25}) --- to newly written prompts explicitly framed in this way, illustrating the adapter's behavior in the intended deployment context. Full validation-set outputs are available from the corresponding author upon request.
-
-\begin{table}[b]
-  \centering
-  \caption{Qwen 2.5-0.5B Fast responses to newly written, VR-navigation-framed prompts.}
-  \label{tab:examples}
-  \footnotesize
-  \begin{tabular}{p{0.11\linewidth}p{0.38\linewidth}p{0.38\linewidth}}
-    \hline
-    Age / Category & Question & Response \\
-    \hline
-    5--11, What to Expect &
-    ``I'm walking around in here and I see a big room with lots of toys and games. What's that room for?'' &
-    ``That's a hospital! The big room you're seeing is called the B1-B2 Unit. It has lots of special toys and games to help kids feel more comfortable while they're in the hospital. There are also crafts, puzzles, and board games for your family to play together too!'' \\[4pt]
-    5--11, Who Are These People? &
-    ``I see a dog walking around with someone wearing a special vest. Is that dog allowed to be here?'' &
-    ``That dog is a therapy animal, and it's really important to let them do their job. The special vest you see is called a therapy vest, and it's there to help the dog feel more comfortable. The hospital or animal shelter will make sure everything is ready for you to bring your dog inside, and they'll let the therapy volunteers know when it's okay.'' \\[4pt]
-    12--18, What to Expect &
-    ``I'm looking around in here and I see a room labeled CT. What actually happens in there?'' &
-    ``The CT (Computed Tomography) in the room is a digital imaging machine. It's used to create cross-sectional images of your body --- that means it takes a series of X-rays and then processes them to create detailed images. The CT scan is one way your care team uses to diagnose conditions like fractures, infections, or certain types of cancer. It's a quick and painless procedure that can be done in the hospital or at home with your parent. If you're having a hard time finding it, ask your nurse to point it out or check with the IT staff.'' \\[4pt]
-    12--18, Emotional Reassurance &
-    ``Looking around at all this before my actual visit is making my anxiety worse, not better.'' &
-    ``That's a lot of stress. You're right --- anxiety is real, and it can be hard to manage when you feel like your body's telling you something. But the hospital is a real place, and it might be worth going through this experience with you. You can talk to your care team about what they'd like and need from the visit, or ask for a distraction. You don't have to go through this alone --- your care team can help you feel less anxious about the process.'' \\
-    \hline
-  \end{tabular}
-\end{table}
+Table~\ref{tab:examples} shows live-generated responses from the Qwen 2.5-0.5B Fast configuration --- one of the recommended deployment configurations (Section~\ref{sec:qwen25}) --- illustrating the adapter's behavior in the intended deployment context. Full validation-set outputs are available from the corresponding author upon request.
 
 \nocite{*}% Show all bib entries - both cited and uncited; comment this line to view only cited bib entries;
 
