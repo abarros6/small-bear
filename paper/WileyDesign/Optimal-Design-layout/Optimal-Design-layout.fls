@@ -2,7 +2,7 @@ PWD /Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout
 INPUT /usr/local/texlive/2026/texmf.cnf
 INPUT /usr/local/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT Optimal-Design-layout.tex
+INPUT /Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex
 OUTPUT Optimal-Design-layout.log
 INPUT ./USG.cls
 INPUT USG.cls

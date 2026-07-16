@@ -1,5 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1784244804.12441 "Optimal-Design-layout.tex" "Optimal-Design-layout.pdf" "Optimal-Design-layout" 1784244805.05564 0
+["pdflatex"] 1784245695.17689 "/Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex" "Optimal-Design-layout.pdf" "Optimal-Design-layout" 1784245696.11678 0
+  "/Users/ab/projects/small-bear/paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex" 1784245693.83022 58797 949fc58cfbe6fe64676cedb070c9573c ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/stix2-type1/stix2-mathbb.enc" 1610747736 2904 e0faa515d685129700e18ca6e0e2b48f ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/stix2-type1/stix2-mathcal.enc" 1610747736 3356 2818ff063f8b5d0d850e1203330b9fda ""
@@ -249,8 +250,8 @@
   "/usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1774209607 3636776 dc5fa9b6b1453b9d196cd42edf876004 ""
   "/usr/local/texlive/2026/texmf.cnf" 1774209515 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
   "NJDnatbib.sty" 1784073064.46347 46229 b23b408004050376b05f17f766e34127 ""
-  "Optimal-Design-layout.aux" 1784244804.89016 20445 2d2b1b73a935c6cd14b90b53a1f913f1 "pdflatex"
-  "Optimal-Design-layout.tex" 1784244786.28421 58663 17b37203542e46d2ccf83873d2510716 ""
+  "Optimal-Design-layout.aux" 1784245695.96399 20445 be5f5b29315a27de9ad53d7d19392b57 "pdflatex"
+  "Optimal-Design-layout.tex" 1784245693.83022 58797 949fc58cfbe6fe64676cedb070c9573c ""
   "USG.cls" 1784073064.46871 95431 0244fdb94a6bc18f048db962c353f564 ""
   "algorithm.sty" 1784073064.46884 3250 ec924db429a99ca4ed9c3769acfa5f18 ""
   "algorithmicx.sty" 1784073064.46964 26750 ce139c05a983e19ddca355b43e29c395 ""
