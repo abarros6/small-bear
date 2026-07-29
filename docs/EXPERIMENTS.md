@@ -216,7 +216,273 @@ After `prepare_data.py`: age_5_11 → 562 train / 50 valid; age_12_18 → 561 tr
 
 ---
 
-## §6 — TODO (future, not scheduled)
+## §6 — **COMPLETE** — Crossover Reproducibility Crisis and Resolution (Seed Campaign)
+
+**Context.** During Springer/AISSH-26 manuscript review (three rounds of adversarial
+self-review, see `paper/AISSH_Springer/REVIEW_TODO.md`), a routine check re-ran the nominal
+Fast-1B configuration (`r=4`, `num_layers=8`, seed=42, identical data) as part of the §1 rank
+sweep. It produced FK≤7.0 = 65% instead of the original single run's 82% — a 17-point swing
+on a configuration that was supposed to be identical in every controlled variable. This called
+the entire Standard-vs-Fast crossover (the paper's central empirical claim) into question: the
+original 8-run ablation was single-seed, and if identical reruns swing by double digits, the
+6–12 point crossover gaps originally reported could plausibly be noise, not signal.
+
+### §6.1 — Version-confound test — COMPLETE (confound ruled out)
+
+**Question.** Is the swing explained by an undisclosed `mlx`/`mlx-lm` version change between
+the original training (2026-03-25, `mlx==0.30.6`/`mlx-lm==0.30.7`) and the rank-sweep rerun
+(2026-05-06, `mlx==0.31.2`/`mlx-lm==0.31.3`, bumped 2026-05-04 in commit `729d0de`)?
+
+**Design.** Created an isolated venv (`.venv-mlx030`) pinned to the original `mlx==0.30.6`/
+`mlx-lm==0.30.7`. Retrained Fast-1B and Fast-3B (`r=4`, `num_layers=8`, seed=42, identical data
+— verified via `diff` against the sweep configs and via git history that `data/age_5_11/` was
+untouched between the two dates) under the old versions.
+
+**Result.** Old-version reruns landed at 58% (1B) and 62% (3B) — *further* from the original
+(82%/76%) than even the new-version sweep rerun (64%/64%), not closer to it. **The version
+bump is not the (sole) explanation.** Three independent attempts at one nominal configuration
+now span 58–82% (1B) and 62–76% (3B) — noise larger than the effect being tested.
+
+A quick code audit (`mlx_lm/tuner/trainer.py`, `mlx_lm/lora.py`) confirmed the seeding logic
+itself is correct (`np.random.seed(seed)` before batch-order permutation, `mx.random.seed`
+before training). The remaining source is very likely GPU/Metal kernel-level floating-point
+non-determinism (non-associative parallel reduction order), a known category of issue for
+GPU-accelerated training in general, not a coding bug in this project. A follow-up check found
+this extends to *inference* too: re-generating from an unmodified, already-trained adapter
+(no retraining at all) produced a different FK pass rate on a second invocation.
+
+**Infrastructure:** `.venv-mlx030` (temporary, pinned old versions), `configs/version_check_{1b,3b}.yaml`
+
+### §6.2 — Seed campaign — COMPLETE (crossover confirmed with real statistical power)
+
+**Question.** Given demonstrated run-to-run variance larger than the claimed effect, is the
+Standard-vs-Fast crossover (Standard wins on 3B, Fast wins on 1B) real, or noise?
+
+**Design.** Retrained Standard and Fast at their *actual* defined configurations (Standard:
+`r=8`, `num_layers=16`; Fast: `r=4`, `num_layers=8` — not the rank-sweep's one-factor-at-a-time
+variants) across many seeds, role `age_5_11`, measuring FK≤7.0 pass rate per run (the paper's
+primary crossover metric). Two batches to reach adequate power without stopping-early bias:
+batch 1 (n=25 for 1B configs, n=15 for 3B configs, chosen from an a priori power estimate off
+the version-confound test's noise), then — after batch 1 left the 3B comparison marginal
+(p=0.054) — a pre-committed batch 2 doubling 3B to n=30/config, analyzed only after the full
+batch completed. 110 total training runs; 4 adapters reused from the existing rank-sweep
+(seed 42/1337, already trained under the current `mlx` version).
+
+**Result:**
+
+| Config | n | FK≤7.0 mean | SD | min–max |
+|--------|---|-------------|-----|---------|
+| Fast-1B | 25 | 63.4% | 6.3 | 52–78% |
+| Standard-1B | 25 | 52.1% | 6.3 | 40–62% |
+| Fast-3B | 30 | 52.2% | 7.0 | 42–66% |
+| Standard-3B | 30 | 58.3% | 6.9 | 46–80% |
+
+Two-sample t-tests:
+- **1B: Fast > Standard, t=6.40, p=6.04×10⁻⁸.**
+- **3B: Standard > Fast, t=3.42, p=0.0011.**
+
+**Key finding: the crossover is real and reproducible on both sides**, confirmed with proper
+statistical power — not an artifact of two lucky single-seed draws. The original single-run
+point estimates (82%/72% for 1B; 84%/76% for 3B) were themselves toward the high end of a wide
+per-config distribution (SD ≈ 6–7 points) rather than representative means; the *direction and
+approximate magnitude* of the gap (11.3 points on 1B here vs. 10 originally; 6.1 points on 3B
+here vs. 8 originally) held up under proper multi-seed testing even though the absolute levels
+did not.
+
+**Scope caveat.** The campaign measured FK≤7.0 pass rate only, on `age_5_11` only. It does not
+re-verify the other four readability metrics, the `age_12_18` role, latency, or the inter-role
+classifier at this sample size — those remain single-seed (or, for the classifier, single
+5-fold-CV run) as in the original ablation. The rank/layer sweeps (§1) remain their own
+2-seed experiments and are not superseded by this campaign; they answer a different question
+(what does varying rank/depth in isolation do) from this campaign (is the specific
+Standard-vs-Fast comparison, at their actual defined configs, statistically real).
+
+**Infrastructure:** `scripts/gen_seed_campaign_configs.py`, `scripts/gen_seed_campaign_batch2_3b.py`,
+`scripts/run_seed_campaign.sh` (resumable: skips training/generation/evaluation steps whose
+outputs already exist) | **Results:** `results/seed_campaign/summary.csv`
+
+### §6.3 — Follow-up — COMPLETE — Why the campaign's absolute numbers are lower: a dataset-vintage confound, not (mainly) non-determinism
+
+A pessimistic-review pass on the resulting manuscript (4th round) caught something the §6.2
+writeup got wrong: all four original single-seed numbers sit 3+ SD above their own
+campaign-measured means *simultaneously* (Standard-3B z≈3.72, Fast-3B z≈3.40, Standard-1B
+z≈3.16, Fast-1B z≈2.95) — a joint event with probability ≈4×10⁻¹⁴ if these were really just
+noisy draws from the same distribution. That ruled out "high end of a wide distribution" as
+the explanation and demanded a real cause.
+
+**Checkpoint-selection hypothesis — ruled out.** Verified `adapters.safetensors` (what
+`generate_outputs.py` loads) is byte-identical to the step-600 checkpoint for all four
+original adapters — no post-hoc best-of-6-checkpoint cherry-picking occurred.
+
+**The real cause: the training and validation data are not the same vintage.** The May 7
+dataset quality pass (§5) did two things simultaneously that the original manuscript text
+didn't flag: (1) added `edge_cases` (50 examples) and 73 diversified examples to
+**training** data (1000 → 1123 examples), and (2) replaced the **validation** set with 100
+new, independently-written examples. The original 8-run ablation and the §1 rank sweep
+(2026-03-25 and 2026-05-06, both before 2026-05-07) used the *old* 1000-example training set
+and the *old*, circular validation set. The seed campaign (2026-07-25/27) used whatever was
+on disk — the *current*, expanded training set and the *current*, independently-written
+validation set — without this being a deliberate choice or a disclosed one.
+
+**Decisive test:** re-evaluated the original, unmodified Fast-1B and Standard-1B adapters
+(zero retraining) on the *current* validation set:
+- Fast-1B: 82% (old validation set) → **66%** (current validation set) — campaign mean 63.4%±6.3
+- Standard-1B: 72% (old validation set) → **60%** (current validation set) — campaign mean 52.1%±6.3
+
+Both land much closer to the campaign's own distribution than the original numbers did —
+most of the original-vs-campaign gap is the dataset-vintage change, not training instability.
+
+**Caveat — it's not simply "the new set is harder."** Re-evaluating the May-6 rank-sweep
+adapter (new mlx version, *old* training data, never retrained) on the *current* validation
+set gave 72% — *higher* than its own old-validation-set score of 64%. Validation-set choice
+moves scores in both directions depending on the specific adapter, consistent with ordinary
+50-example sampling variance in *which* items landed in each hand-curated set, not a uniform
+difficulty gradient.
+
+**Net effect on the §6.1/§6.2 conclusions:**
+- The §6.2 crossover confirmation (t=6.40 / t=3.42) is unaffected — all 110 campaign runs
+  share one consistent (current) dataset vintage, so that internal comparison was never
+  confounded by this.
+- The §6.1 finding that a library-version bump doesn't explain the original single-run swing
+  is *weaker* than stated: that test (re-training under the old mlx version) was itself run in
+  July, so it also used the current (not period-matched) validation set — an additional,
+  unaccounted-for confound layered on top of the library-version test. It was never cleanly
+  re-tested holding the validation set at its original vintage.
+- The original §1 rank-sweep finding (82% → 64%/66%, same seed, same *old*-vintage data and
+  validation set both times, differing only in mlx version and training invocation) remains a
+  clean, unconfounded result and still shows genuine ~16-18pt run-to-run non-determinism
+  independent of any dataset-vintage effect — smaller in magnitude than initially emphasized,
+  but real.
+- We did not attempt to fully decompose the relative contributions of training
+  non-determinism, evaluation-set sampling variance, and the dataset revision — that would
+  need a proper factorial design (old/new training data × old/new validation set × old/new
+  mlx version) not run here.
+
+**Paper fix:** manuscript's Datasets (§4.2), Results (§3.2/seed campaign), and Limitations
+sections rewritten to disclose the two dataset vintages and attribute the gap correctly.
+
+### §6.4 — Follow-up — COMPLETE — Full vintage audit: the mixing was broader than §6.3 found, now resolved
+
+A direct question ("shouldn't all experiments use the same dataset?") prompted a full audit
+of every experiment's adapter-training timestamp against the dataset files' final
+modification time (2026-05-07 15:06), rather than trusting commit-bundling as a proxy for
+vintage (§6.3's approach). Result: **the rank sweep (32 runs), the full layer sweep (12 runs),
+and the initial Qwen 2/SmolLM2/Qwen 2.5 cross-architecture results (16 runs total) all
+predated the final data update**, contradicting the manuscript text written after §6.3, which
+had incorrectly asserted that only the original 8-run ablation was old-vintage.
+
+**Retrained everything to close the gap** (40 additional training runs, ~3 batches):
+- Rank sweep v2 (32 runs, `configs/sweeps_v2`, `adapters/sweeps_v2`) — current vintage
+- Qwen 2 / SmolLM2 cross-arch v2 (4 runs, `configs/crossarch_v2`) — current vintage
+- age_12_18 role-parity (4 runs, `configs/role_parity_v2`) — new, current vintage (the
+  original ablation's age_12_18 outputs had no current-vintage equivalent at all)
+- Layer sweep v2 (8 new runs + 4 reused from sweeps_v2, `configs/layer_sweep_v2`) — current
+  vintage; confirmed via timestamp that ALL layer-sweep configs (including layers=16, not
+  just the layers=8 reused ones) predated the data update
+- Qwen 2.5 family sweep v2 (6 runs, `configs/qwen25_v2`) — current vintage; also confirmed
+  to have predated the update by a full day, despite being commit-bundled with the quality
+  pass in a way that initially looked like it postdated it
+
+Base models (1B, 3B) were also re-evaluated on the current validation set (zero-shot, no
+training needed) since base-model scores depend on which 50 validation prompts are asked,
+not on training-data vintage.
+
+**Key findings after full revalidation, current vintage throughout:**
+- Perplexity (seed 42, current vintage): Fast-1B 30.18, Standard-1B 30.46, Fast-3B 22.91,
+  Standard-3B 24.88 — perplexity does NOT track the FK-based crossover (Fast has lower PPL
+  than Standard at both sizes), a genuine construct-validity finding worth flagging rather
+  than smoothing over.
+- Rank sweep v2: SmolLM2's depth-driven "large-model regime" (48→63% from r=2 to r=16)
+  **replicates cleanly**. Llama 1B and Qwen 0.5B's original clean "small-model regime, peaks
+  at r=2" story **does not replicate** — both are now flat within noise (Llama 1B: 63/59/64/62;
+  Qwen 0.5B: 70/71/71/60). Llama 3B shows only a weak, noisy increase (54→62%). The paper's
+  "rank is the operative variable, transformer depth determines the regime" claim is now
+  presented as suggestive (SmolLM2-supported) rather than resolved across all four
+  architectures, as the original single-seed sweep implied.
+- Layer sweep v2: replicates well — 3B improves with depth (57→63%, +6pt, vs original +7pt);
+  1B still peaks at fewest layers (69% at layers=4) though the exact shape differs from the
+  original (monotonic decline vs. dip-then-recovery).
+- Cross-arch v2 (Qwen2/SmolLM2 FK+latency): directions replicate (Standard beats Fast for
+  both; SmolLM2 dominates). Qwen 2.5 v2: "Fast at or above Standard at every size" replicates
+  (tied rather than a clear Fast win at 0.5B, clear wins at 1.5B/3B).
+- **One remaining, explicitly disclosed gap:** the cross-architecture table's Classifier
+  column (Qwen2/SmolLM2/Qwen2.5, all sizes) still reflects the original pre-revision vintage —
+  computing it on the current vintage would require training age_12_18 counterparts for all
+  10 configs, not done here. Flagged as provisional in the paper (Table~tab:crossarch caption
+  and footnote) rather than silently left inconsistent.
+
+**Paper fix:** Abstract, Introduction, Contributions, Results §3.1 (new single-seed table,
+now fully current-vintage, plus new perplexity discussion), §3.2 (seed campaign, streamlined),
+§3.4 (rank/layer sweep tables and prose, substantially rewritten to reflect partial
+replication), §3.5 (cross-arch table and prose, with the classifier caveat), Methods §4.2
+(corrected the false "only the ablation is old-vintage" claim), Discussion, Conclusion, and
+Limitations (added the mechanism-claim walk-back, the perplexity finding, and a guard-bear
+leakage-check caveat raised in the same review round) all rewritten. Also added a training/
+eval-only leakage caveat for guard-bear's near-ceiling ROC-AUC, flagged by the same review
+round but not yet independently investigated.
+
+**Infrastructure:** `scripts/run_generic_batch.sh` (parameterized train→generate→evaluate
+runner, reused across all four new v2 batches with a per-directory model-size map file) |
+**Results:** `logs/sweeps_v2/`, `logs/crossarch_v2/`, `logs/role_parity_v2/`,
+`logs/layer_sweep_v2/`, `logs/qwen25_v2/` (per-run eval text files; no single aggregated CSV
+was built for these batches — aggregation was done ad hoc via Python one-liners during the
+paper rewrite).
+
+---
+
+### §6.5 — Follow-up — COMPLETE — Sample-size peeking correction and length-confound check on the seed campaign
+
+A 6th pessimistic review (after the page-budget trim, `paper/AISSH_Springer/REVIEW_TODO.md`
+Round 6) flagged two further substantive issues in the seed campaign (Section 3.2 of the
+paper), both fixed with real analysis rather than caveats:
+
+**Sample-size peeking (3B side).** The 3B campaign's $n$ was raised from 15 to 30/config
+after a preliminary batch left the comparison marginal ($t=2.01$, $p=0.054$); analyzing the
+resulting pooled $n=30$ naively is anti-conservative because the decision to extend was
+itself informed by this unblinded interim look. Fix: identified the exact seed split between
+the interim batch (`scripts/gen_seed_campaign_configs.py`, `SEEDS_3B` first 15) and the
+top-up batch (`scripts/gen_seed_campaign_batch2_3b.py`, 15 new seeds), then computed a
+pre-specified equal-weight inverse-normal combination test (Bauer–Köhne/Lehmacher–Wassmer
+style) combining the interim-stage one-sided $p$ with the fresh, independent 15-seed
+replication's result ($t=2.75$, $p=0.010$, never used in the extension decision). Combined
+result: one-sided $p=0.00075$ (two-sided-equivalent $p=0.0015$) — still significant, so the
+3B-side crossover survives the statistically correct test, just less dramatically than the
+naive pooled $p=0.0011$ the paper previously reported as its sole number. The paper now
+reports the corrected $p=0.0015$ as the headline 3B figure throughout (Abstract, Contributions,
+Discussion, Conclusion), with the naive number kept only in Section 3.2 for methodological
+transparency. Script: `scripts/peeking_correction_analysis.py`; raw numbers in
+`results/seed_campaign/peeking_correction.txt`.
+
+**Response-length confound.** Standard and Fast differ systematically in output length
+(Table 1), raising the question of whether the crossover is really a readability/register
+effect or just a length effect. Fix: recomputed per-example FK grade and word count (via
+`textstat`, same method as `src/evaluate.py`) for all 5,500 individual seed-campaign
+responses (`scripts/length_confound_analysis.py`, output saved to
+`results/seed_campaign/length_confound.txt`), then residualized FK grade on word count and
+compared residuals by config. Findings: **the 1B-side crossover survives length-adjustment**
+($t=-5.95$, $p=3\times10^{-9}$) — Fast's advantage is a genuine length-independent register
+effect, not just being shorter (72 vs. 78 words). **The 3B-side crossover is substantially a
+length effect** — the length-adjusted difference is only marginal ($t=-1.92$, $p=0.055$), and
+a logistic regression of pass/fail on config + word count gives a near-zero config
+coefficient once length is controlled; Standard's 3B advantage is better described as
+"produces shorter responses" than "produces more simply-worded responses at a given length."
+This was not tested for the rank/layer sweeps' architectures (flagged as a residual gap in
+Limitations).
+
+**Net effect:** the crossover's statistical existence is now confirmed under the
+methodologically correct test (not just the anti-conservative one) on both sides, but the two
+sides are understood to differ in kind — 1B is a real register effect, 3B is mostly a length
+effect. This is a genuine tightening of the paper's causal story, in the same spirit as the
+rank-sweep mechanism walk-back in §6.4: report what survives scrutiny, not what was originally
+hoped for.
+
+**Paper fix:** Abstract, Contributions, Results §3.2 (two new paragraphs plus corrected
+p-value), Discussion, Conclusion, and Limitations all updated. Page budget was re-exceeded by
+this addition (12→13 pages) and re-trimmed back to exactly 12 pages of body content via
+further prose condensing (Related Work, Evaluation Framework, Discussion) — no numeric content
+was cut to make room, only redundant phrasing.
+
+## §7 — TODO (future, not scheduled)
 
 - **Dataset quality cull (Area 4).** Score all training examples on FK grade and response
   length, flag weak candidates for removal before next retraining run. See §5 above.
@@ -226,3 +492,13 @@ After `prepare_data.py`: age_5_11 → 562 train / 50 valid; age_12_18 → 561 tr
 - **Safety evaluation / guard model.** Blocking inline classifier (DistilBERT distilled from
   Llama Guard 3 1B labels) placed before adapter response is shown. Planned architecture
   confirmed: Option A (tiny fine-tuned classifier), ~66M params, ~30ms inference.
+- **guard-bear leakage/shortcut check.** Its near-ceiling 0.999 ROC-AUC has not been checked
+  for train/test leakage (near-duplicate examples across splits) or superficial lexical
+  shortcuts (e.g. the classifier keying on a small vocabulary marker rather than genuine
+  semantic understanding) that could inflate the reported discrimination. Raised in the 5th
+  pessimistic-review round (`paper/AISSH_Springer/REVIEW_TODO.md`); flagged in the paper's
+  Limitations but not yet investigated.
+- **Cross-architecture classifier revalidation.** Table~tab:crossarch's Classifier column
+  (Qwen2, SmolLM2, Qwen2.5 — 10 configs) still reflects the pre-quality-pass dataset vintage;
+  revalidating requires training age_12_18 counterparts for all 10 configs (not yet done —
+  see §6.4).

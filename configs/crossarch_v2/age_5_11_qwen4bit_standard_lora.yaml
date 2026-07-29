@@ -1,0 +1,41 @@
+# ages 5-11 adapter — Qwen2-0.5B 4-bit, standard config (rank 8, 16 layers)
+# Train with: mlx_lm.lora --config configs/age_5_11_qwen4bit_standard_lora.yaml
+# Pair with age_5_11_qwen4bit_lora.yaml (fast, rank 4, 8 layers) to test crossover on Qwen.
+
+model: "mlx-community/Qwen2-0.5B-Instruct-4bit"
+train: true
+fine_tune_type: "lora"
+data: "data/age_5_11"
+
+# --- LoRA Architecture ---
+# Qwen2-0.5B has 24 transformer layers.
+# num_layers=16 adapts the upper 16 layers (upper 67%) — matches the absolute layer
+# count used for Standard Llama adapters (also 16 layers).
+num_layers: 16
+
+lora_parameters:
+  rank: 8
+  scale: 20.0
+  dropout: 0.0
+
+# --- Training Schedule ---
+# Identical to all other configs — only model and LoRA architecture change.
+batch_size: 4
+iters: 600
+learning_rate: 1e-5
+
+lr_schedule:
+  name: cosine_decay
+  warmup: 100
+  arguments: [1e-5, 600]
+
+mask_prompt: true
+
+adapter_path: "adapters/crossarch_v2/age_5_11_qwen4bit_standard_lora"
+
+save_every: 100
+steps_per_report: 10
+steps_per_eval: 60
+val_batches: -1
+max_seq_length: 768
+seed: 42
