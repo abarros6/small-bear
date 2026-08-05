@@ -87,6 +87,18 @@ python src/generate_outputs.py --model-size qwen4bit    # → outputs/all_qwen4b
 # Qwen — standard adapters (rank 8, 16 layers)
 python src/generate_outputs.py --model-size qwen_standard       # → outputs/all_qwen_standard_outputs.jsonl
 python src/generate_outputs.py --model-size qwen4bit_standard   # → outputs/all_qwen4bit_standard_outputs.jsonl
+
+# Prompted baseline (base model + system prompt, no fine-tuning) — the AISSH paper's
+# comparison against the "free" alternative to LoRA fine-tuning (§3.1, Table 1's
+# Prompted-1B/3B rows). System prompts are quoted here so they're recoverable outside
+# the paper's footnote:
+python src/generate_outputs.py --base --model-size 1b --output-tag prompted_base_1b \
+  --system-prompt-5-11 "You are Dr. Beary Good, a warm and friendly guide at a children's hospital. You are talking to a child between the ages of 5 and 11. Use simple words, short sentences, and a warm, reassuring tone." \
+  --system-prompt-12-18 "You are Dr. Beary Good, a warm and friendly guide at a children's hospital. You are talking to a teenager between the ages of 12 and 18. Use clear, respectful language appropriate for a teen audience."
+python src/generate_outputs.py --base --model-size 3b --output-tag prompted_base_3b \
+  --system-prompt-5-11 "You are Dr. Beary Good, a warm and friendly guide at a children's hospital. You are talking to a child between the ages of 5 and 11. Use simple words, short sentences, and a warm, reassuring tone." \
+  --system-prompt-12-18 "You are Dr. Beary Good, a warm and friendly guide at a children's hospital. You are talking to a teenager between the ages of 12 and 18. Use clear, respectful language appropriate for a teen audience."
+# → outputs/all_prompted_base_1b_outputs.jsonl, outputs/all_prompted_base_3b_outputs.jsonl
 ```
 
 ---

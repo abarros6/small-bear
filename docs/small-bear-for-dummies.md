@@ -149,6 +149,30 @@ total parameters, SmolLM2 is architecturally deeper — more layers means more p
 representational capacity that higher-rank adapters can exploit. Total parameter count is
 a misleading proxy; **layer depth is what actually matters**.
 
+### Finding 6: We checked whether the crossover was just luck — it wasn't (mostly)
+
+Early results (Findings 3–5 above) each came from training one adapter once per configuration.
+A routine re-check retrained the "same" configuration a second time and got a wildly different
+score — a 17-point swing with nothing changed on paper. That's a red flag: if identical setups
+can swing that much, maybe the crossover itself was never real, just two lucky/unlucky draws.
+
+So we retrained every configuration dozens of times each (110 training runs total) and ran
+proper statistics. The verdict: **the crossover is real on both sides**, but not identical in
+kind. On the 1B model, Fast's advantage holds up even after controlling for response length —
+a genuine "communicates better" effect. On the 3B model, Standard's advantage turns out to be
+mostly because it writes shorter responses, not because it writes more simply *for a given
+length*. Both are real findings; the 3B one is a more modest claim than we originally thought.
+Full statistical detail: `EXPERIMENTS.md` §6.
+
+### A second, related project: guard-bear
+
+Alongside this adapter work, a companion project called **guard-bear** was built to sit in
+front of the response model: a small classifier that checks whether an incoming question is
+safe to answer at all (catching things like distress escalation) before the age-appropriate
+adapter ever sees it. It lives in its own repo (`../guard-bear/`) and is evaluated separately,
+but it's presented together with this crossover work as the two contributions of the same
+paper submission.
+
 ---
 
 ## What's the practical upshot?
@@ -171,7 +195,8 @@ smaller adapter may outperform on constrained architectures.
 - **Human evaluation**: automated readability scores are a proxy. Real peer raters scoring
   whether outputs actually sound right to a 7-year-old vs. a 15-year-old would strengthen the
   claim.
-- **Safety evaluation**: the model needs a guard layer that catches distress escalation
-  ("I can't breathe") and redirects appropriately before any response is shown to a patient.
+- **guard-bear's leakage check**: its near-perfect discrimination score hasn't yet been checked
+  for whether it's cheating on some shortcut in the training data rather than genuinely
+  understanding the query.
 - **Dataset quality cull**: programmatic scoring to remove the weakest training examples before
   the next retraining pass.

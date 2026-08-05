@@ -39,7 +39,8 @@ OUTPUT_DIR = Path("outputs")
 
 
 def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str = "",
-                      use_base: bool = False, adapter_path_override: str = "") -> list:
+                      use_base: bool = False, adapter_path_override: str = "",
+                      system_prompt_override: str = None) -> list:
     """Run inference on the validation set for one role and return results.
 
     Args:
@@ -49,6 +50,9 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
         variant:               Adapter subdirectory prefix, e.g. 'fast'.
         use_base:              If True, load base model with no adapter.
         adapter_path_override: Explicit adapter directory path — used for sweep runs.
+        system_prompt_override: If given, use this system prompt instead of the
+                                default (None / matching-training-conditions) logic —
+                                for the prompted-base-model comparison.
 
     Returns:
         List of result dicts, one per validation example.
@@ -82,7 +86,11 @@ def generate_for_role(role: str, model_size: str, max_tokens: int, variant: str 
     for i, instruction in enumerate(instructions):
         # SmolLM2 uses an empty system message to suppress its default template injection.
         # All other models use None (no system message) to match training conditions.
-        sys_prompt = "" if model_size == "smollm2" else None
+        # system_prompt_override supersedes both — used for the prompted-base-model comparison.
+        if system_prompt_override is not None:
+            sys_prompt = system_prompt_override
+        else:
+            sys_prompt = "" if model_size == "smollm2" else None
         response, latency = generate_response(
             model, tokenizer, instruction,
             system_prompt=sys_prompt,
@@ -124,6 +132,11 @@ def main():
                         help="Override the output filename prefix (default: derived from --variant / --model-size). "
                              "E.g. --output-tag rank4_layers8_seed42_1b → "
                              "outputs/rank4_layers8_seed42_1b_age_5_11_outputs.jsonl")
+    parser.add_argument("--system-prompt-5-11", default=None,
+                        help="System prompt to use for age_5_11 (requires --base). "
+                             "Use with --system-prompt-12-18 for the prompted-baseline comparison.")
+    parser.add_argument("--system-prompt-12-18", default=None,
+                        help="System prompt to use for age_12_18 (requires --base).")
     args = parser.parse_args()
 
     roles = [args.role] if args.role else ROLES
@@ -139,8 +152,14 @@ def main():
         tag = ""
     all_results = []
     for role in roles:
+        sys_prompt_override = None
+        if role == "age_5_11" and args.system_prompt_5_11 is not None:
+            sys_prompt_override = args.system_prompt_5_11
+        elif role == "age_12_18" and args.system_prompt_12_18 is not None:
+            sys_prompt_override = args.system_prompt_12_18
         results = generate_for_role(role, args.model_size, args.max_tokens, args.variant, args.base,
-                                    adapter_path_override=args.adapter_path)
+                                    adapter_path_override=args.adapter_path,
+                                    system_prompt_override=sys_prompt_override)
         if not results:
             continue
 

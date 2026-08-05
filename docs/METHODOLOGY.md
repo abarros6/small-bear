@@ -2,8 +2,9 @@
 
 This document records the experiments run in this project in the order they were conducted,
 what each was designed to answer, and what it found. For raw numbers see
-`RESULTS_COMPARISON.md`; for forward roadmap see `EXPERIMENTS.md`; for canonical write-up
-see `paper/Paper.tex`.
+`RESULTS_COMPARISON.md`; for forward roadmap see `EXPERIMENTS.md`; for the numbers/rationale
+source of truth see `paper/Paper.tex`. The manuscript actually submitted for AISSH-26 (which
+also adds the guard-bear contribution, Phase 7 below) is `paper/AISSH_Springer/aissh_final.tex`.
 
 ---
 
@@ -80,6 +81,13 @@ architectures: Llama 1B, Llama 3B, Qwen 0.5B, SmolLM2 360M. Two seeds (42, 1337)
 Role `age_5_11` only. 32 training runs total.
 
 **Finding: rank is the operative variable.**
+
+> **Later caveat (see Phase 7 / `EXPERIMENTS.md` §6.4).** This sweep predated the May-7
+> dataset quality pass. On vintage-corrected retraining, SmolLM2's depth-driven large-model
+> pattern replicated cleanly, but Llama 1B and Qwen 0.5B's clean small-model regime below came
+> back flat within noise. The table below is the original (superseded) reading — treat the
+> per-model peak-rank numbers as suggestive, not confirmed; the crossover itself and the
+> rank-dominant/depth-secondary interpretation still stand.
 
 | Model      | Rank 2          | Rank 4       | Rank 8           | Rank 16          | Peak  |
 |------------|-----------------|--------------|------------------|------------------|-------|
@@ -176,17 +184,66 @@ Four targeted improvements to the training data:
 
 ---
 
+## Phase 7 — Crossover Reproducibility Crisis and Resolution (Seed Campaign)
+
+**Trigger.** During AISSH-26 manuscript review, a routine rank-sweep rerun of the nominal
+Fast-1B configuration (identical hyperparameters, seed, and data as the Phase 1 headline run)
+landed at 65% FK≤7.0 instead of the original 82% — a 17-point swing on a run that should have
+been deterministic-ish. This called the entire Phase 1 crossover into question.
+
+**Version-confound test.** Retrained under the exact original `mlx`/`mlx-lm` versions in an
+isolated venv — ruled out as the explanation; old-version reruns landed even further from the
+original numbers. Root cause is very likely GPU/Metal floating-point non-determinism at the
+kernel level (confirmed present in inference too, not just training), not a project bug.
+
+**Seed campaign.** With run-to-run noise established as larger than the claimed effect, retrained
+Standard/Fast × 1B/3B at their actual defined configs across up to 30 seeds each (110 runs
+total, two batches to avoid stopping-early bias). Result: **the crossover is real on both
+sides** — 1B: Fast (63.4%) > Standard (52.1%), t=6.40, p=6.0×10⁻⁸. 3B: Standard (58.3%) >
+Fast (52.2%), t=3.42, p=0.0011 naive / **p=0.0015 after a pre-specified peeking correction**
+(the 3B batch was extended from n=15 to n=30 after an interim look, which needed a proper
+combination test rather than naive pooling).
+
+**Length-confound check.** Residualized FK grade on response word count across all 5,500
+seed-campaign responses. **The 1B-side crossover survives length adjustment** (t=-5.95,
+p=3×10⁻⁹ — a genuine register effect). **The 3B-side crossover is substantially a length
+effect** (length-adjusted t=-1.92, p=0.055, only marginal) — Standard's 3B advantage is better
+described as "shorter" than "more simply worded at a given length."
+
+**Full vintage audit.** Investigating why the campaign's absolute numbers ran lower than the
+originals surfaced a broader issue: the original Phase 1 ablation, the Phase 3 rank sweep, the
+Phase 4 layer sweep, and the Phase 2 cross-architecture runs all predated the Phase 6 dataset
+quality pass (old training + old, circular validation data). Resolved by retraining all of
+those (40 additional runs, `configs/sweeps_v2`, `layer_sweep_v2`, `crossarch_v2`,
+`qwen25_v2`, plus new `role_parity_v2` runs for `age_12_18`) on the current, consistent
+vintage. The crossover itself replicates; the rank sweep's clean small-model-regime story for
+Llama 1B/Qwen 0.5B specifically does not (see Phase 3 caveat above).
+
+Full detail, raw numbers, and infrastructure: `EXPERIMENTS.md` §6.
+
+**Related, separate contribution — guard-bear.** A companion input-safety classifier
+(`../guard-bear/`, DistilBERT distilled from Llama Guard 3 1B labels) was built and evaluated
+independently of this ablation work, gating access to the response model. Near-ceiling 0.999
+ROC-AUC; a leakage/shortcut check is still outstanding (`EXPERIMENTS.md` §7). Presented as this
+project's second contribution alongside the LoRA crossover in the submitted AISSH-26 manuscript
+(`paper/AISSH_Springer/aissh_final.tex`).
+
+---
+
 ## Summary of Confirmed Findings
 
 | Finding | Source | Status |
 |---------|--------|--------|
 | Standard wins on 3B; Fast wins on 1B (crossover) | Phase 1 | Confirmed |
+| Crossover holds under proper multi-seed statistical power (110 runs) | Phase 7 | Confirmed |
+| 1B-side crossover is a genuine length-independent register effect | Phase 7 | Confirmed |
+| 3B-side crossover is substantially a response-length effect | Phase 7 | Confirmed |
 | Fast-1B is the only Llama variant under the 1.0 s latency target | Phase 1 | Confirmed |
-| Rank is the operative variable (not layer depth) | Phase 3 | Confirmed |
+| Rank is the operative variable (not layer depth), overall | Phase 3 | Confirmed |
+| ...but Llama 1B/Qwen 0.5B's specific small-model-regime curve | Phase 3 / 7 | Suggestive (didn't replicate on retrain) |
 | Depth is a secondary independent contributor | Phase 4 | Confirmed |
-| Transformer depth (not parameter count) predicts rank regime | Phase 3 | Confirmed |
 | Perplexity corroborates FK crossover | Phase 5 | Confirmed |
 | Qwen 2.5: Fast dominates Standard at all sizes (no crossover) | Phase 2 | Confirmed |
 | SmolLM2 follows large-model rank pattern despite 360M params | Phases 2 & 3 | Confirmed |
 | BF16 ≈ 4-bit at 0.5B scale | Phase 2 | Confirmed |
-| Optimal rank for Llama 1B is r=2, not r=4 | Phase 3 | Confirmed |
+| guard-bear input-safety classifier: near-ceiling discrimination | Phase 7 (sibling repo) | Confirmed, leakage check pending |

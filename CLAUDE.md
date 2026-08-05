@@ -18,11 +18,33 @@ between two LoRA adapters trained on a purpose-built dataset. An ablation study 
    engineering. The VR application team injects their own system prompt at deployment time.
 4. **1B vs. 3B Ablation** — Same training pipeline, same dataset, two base models. Compares
    latency vs. style quality tradeoff for VR real-time usage.
+5. **guard-bear (companion safety classifier)** — A DistilBERT-based input-safety classifier,
+   distilled from Llama Guard 3 1B labels, that gates access to the response model — catching
+   distress escalation and unsafe/out-of-scope queries before they reach the LoRA adapters.
+   Built, trained, and evaluated independently in the sibling repo `../guard-bear/` (near-ceiling
+   0.9998 ROC-AUC). A 2026-08-04 audit found the original train/val leakage check was itself
+   flawed (compared validation against the full train+val pool it was drawn from, not the
+   actual disjoint training set); the real leakage, once measured correctly, was minor
+   (~1-2% of val/test) and has since been fixed at the root (dedup before splitting) and the
+   model retrained on a verified zero-overlap split — see `../guard-bear/results/BASELINE_COMPARISON.md`.
+   A template-level paraphrase-leakage check (as opposed to exact-string) remains outstanding —
+   see `docs/EXPERIMENTS.md` §7. Presented as this project's second contribution, alongside the
+   LoRA crossover, in the submitted AISSH-26 manuscript.
 
 ## Paper
 
-The full write-up of this work is at `paper/Paper.tex` (IEEEtai format). It is the canonical
-reference for results, methodology rationale, and the limitations that drive forward work.
+The full write-up of this work is at `paper/Paper.tex` (IEEEtai format). It is the source of
+truth for numbers and methodology rationale that other write-ups draw from, and the
+limitations there drive forward work. It is not itself a submitted manuscript — two
+venue-specific manuscripts are built from it, each independently adapted for its own
+template/format/page budget:
+
+- `paper/WileyDesign/Optimal-Design-layout/Optimal-Design-layout.tex` — submitted to
+  AECAI-PRiSM 2026 (LoRA crossover only, no guard-bear).
+- `paper/AISSH_Springer/aissh_final.tex` — the current AISSH-26 / Springer Nature expansion;
+  adds the guard-bear contribution above as a full second section. This is the actively
+  maintained manuscript going forward. Review history and fix tracker:
+  `paper/AISSH_Springer/REVIEW_TODO.md`.
 
 Headline empirical finding from the paper: a **configuration-ordering crossover** —
 Standard ($r=8$, 16 layers) outperforms Fast on 3B; Fast ($r=4$, 8 layers) outperforms Standard
@@ -517,14 +539,26 @@ behaviour. Drop-in replacement. Other small models require revalidating the data
 
 Status updated after §1 rank sweep and §2 cross-architecture experiments:
 
-- **Confounded comparison — RESOLVED.** A controlled rank sweep (fixed `num_layers=8`,
-  ranks 2/4/8/16, 4 models, 2 seeds) confirms **rank** as the dominant variable via capacity
-  regularization. A subsequent layer sweep (fixed rank=4, `num_layers ∈ {4, 8, 16}`, Llama
-  1B/3B, 2 seeds) confirms depth as an independent secondary contributor: layers=16 beats
-  layers=8 by +4–7% FK at fixed rank; small models peak at layers=4. Crossover reflects
-  joint rank+depth effect. (`docs/EXPERIMENTS.md` §1.)
-- **Single-seed runs — PARTIALLY RESOLVED.** The rank sweep reports mean ± std across 2 seeds.
-  The original 8 runs and the cross-architecture evals (Qwen, SmolLM2) still use seed 42 only.
+- **Confounded comparison — RESOLVED, with one walk-back.** A controlled rank sweep (fixed
+  `num_layers=8`, ranks 2/4/8/16, 4 models, 2 seeds) confirms **rank** as the dominant variable
+  via capacity regularization overall. A subsequent layer sweep (fixed rank=4,
+  `num_layers ∈ {4, 8, 16}`, Llama 1B/3B, 2 seeds) confirms depth as an independent secondary
+  contributor: layers=16 beats layers=8 by +4–7% FK at fixed rank; small models peak at
+  layers=4. Crossover reflects joint rank+depth effect. (`docs/EXPERIMENTS.md` §1.) The rank
+  sweep itself was later found to predate the dataset quality pass below; on vintage-corrected
+  retraining, the crossover-relevant conclusion held but the specific small-model-regime curve
+  for Llama 1B/Qwen 0.5B came back flat within noise — now reported as suggestive, not
+  confirmed (`docs/EXPERIMENTS.md` §6.4).
+- **Single-seed runs — RESOLVED for the headline crossover.** A 110-run multi-seed campaign
+  (`docs/EXPERIMENTS.md` §6) retrained Standard/Fast × 1B/3B at their actual defined configs
+  across up to 30 seeds each: 1B Fast > Standard (t=6.40, p=6.0×10⁻⁸); 3B Standard > Fast
+  (t=3.42, p=0.0015 after a pre-specified peeking correction). A length-confound check found
+  the 1B side is a genuine length-independent register effect, while the 3B side is
+  substantially a response-length effect (Standard is "shorter," not "more simply worded at a
+  given length"). The rank sweep itself still reports mean ± std across only 2 seeds, and on
+  vintage-corrected retraining its clean small-model-regime story for Llama 1B/Qwen 0.5B
+  specifically did not replicate (see next bullet); the cross-architecture evals (Qwen,
+  SmolLM2) still use seed 42 only.
 - **Standard adapter perplexity — RESOLVED.** Post-hoc `--test` pass on all 8 Llama adapters. Perplexity crossover corroborates FK crossover: Standard-3B < Fast-3B; Fast-1B < Standard-1B. Paper Table 1 updated. (`docs/EXPERIMENTS.md` §3.)
 - **Single model family — RESOLVED.** Qwen 2 0.5B, SmolLM2 360M, and Qwen 2.5 (0.5B/1.5B/3B)
   evaluated; crossover confirmed not Llama-specific. Rank sweep covers all four architectures.
@@ -533,7 +567,11 @@ Status updated after §1 rank sweep and §2 cross-architecture experiments:
 
 ### Forward Roadmap
 
-See `docs/EXPERIMENTS.md` for current status. All of §1 (rank sweep + layer sweep), §2
-(SmolLM2, Qwen 2 0.5B, Qwen 2.5 0.5B/1.5B/3B), and §3 (Standard perplexity) are complete.
-Remaining work: longer-term items only (human eval, safety eval, dataset quality pass).
+See `docs/EXPERIMENTS.md` for current status. §1 (rank sweep + layer sweep), §2 (SmolLM2,
+Qwen 2 0.5B, Qwen 2.5 0.5B/1.5B/3B), §3 (Standard perplexity), and §6 (the seed-campaign
+statistical validation of the crossover) are complete. Remaining work: human evaluation,
+guard-bear's leakage/shortcut check, cross-architecture classifier revalidation on the current
+dataset vintage, and the dataset quality **cull** (Area 4 of §5 — scoring existing training
+examples on FK grade/length to remove weak ones; distinct from, and later than, the dataset
+quality **pass** in the table above, which is already done).
 

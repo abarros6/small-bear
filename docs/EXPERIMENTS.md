@@ -12,6 +12,13 @@ this roadmap, see `../paper/Paper.tex` §§5–6.
 
 ## §1 — **COMPLETE** — Rank Sweep: Crossover Mechanism Identification
 
+> **Later caveat (see §6.4).** This sweep's *own* vintage was later found to predate the
+> May-7 dataset quality pass. On vintage-corrected retraining (`sweeps_v2`), the "rank is
+> dominant" conclusion below still holds for the crossover overall, but the clean small-model
+> regime story for Llama 1B and Qwen 0.5B specifically did **not** replicate — it came back
+> flat within noise. Read the rank values below as the original (superseded) single/two-seed
+> read; §6.4 has the current-vintage numbers and the walked-back interpretation.
+
 **Question.** Standard and Fast differ in both `rank` (8 vs. 4) and `num_layers` (16 vs. 8).
 Which factor drives the crossover?
 
@@ -489,15 +496,29 @@ was cut to make room, only redundant phrasing.
 - **Human evaluation.** Peer raters score outputs on age-appropriateness (~30 outputs per
   adapter, inter-rater agreement check). Addresses the "learned stylistic imitation vs.
   genuinely age-appropriate" limitation.
-- **Safety evaluation / guard model.** Blocking inline classifier (DistilBERT distilled from
-  Llama Guard 3 1B labels) placed before adapter response is shown. Planned architecture
-  confirmed: Option A (tiny fine-tuned classifier), ~66M params, ~30ms inference.
-- **guard-bear leakage/shortcut check.** Its near-ceiling 0.999 ROC-AUC has not been checked
-  for train/test leakage (near-duplicate examples across splits) or superficial lexical
-  shortcuts (e.g. the classifier keying on a small vocabulary marker rather than genuine
-  semantic understanding) that could inflate the reported discrimination. Raised in the 5th
-  pessimistic-review round (`paper/AISSH_Springer/REVIEW_TODO.md`); flagged in the paper's
-  Limitations but not yet investigated.
+- ~~Safety evaluation / guard model.~~ **DONE, in a sibling repo.** This item used to describe
+  a not-yet-built classifier; it now exists as **guard-bear** (`../guard-bear/`), a full
+  fine-tune of `meta-llama/Prompt-Guard-86M` (DeBERTa-v2), gating access to the response model.
+  It's built, trained, and evaluated (near-ceiling 0.9998 ROC-AUC post-retrain, see next
+  bullet), and is presented as this project's second contribution in the submitted AISSH-26
+  manuscript (`paper/AISSH_Springer/aissh_final.tex`).
+- **guard-bear leakage/shortcut check — PARTIALLY RESOLVED (2026-08-04).** Exact-text
+  train/val/test overlap check: an initial pass found what looked like near-total validation
+  leakage (612/614), but that compared validation against the full train+val pool it was
+  carved from, not the actual disjoint training set — an artifact of file organization, not
+  real contamination. Reproducing the true split showed the real duplicate-text overlap was
+  minor (10/614 val, 3/613 test, from ~36 exact-duplicate rows among 4,089 raw examples).
+  Fixed at the root: `assemble_dataset.py` now deduplicates the full pool by exact text
+  before any splitting; `guard-bear` was retrained from scratch on the corrected split
+  (verified zero overlap across all three splits) and the deployment threshold re-tuned
+  (0.08 → 0.94). The finding replicates, slightly more cleanly (ROC-AUC 0.9993 → 0.9998).
+  A separate pre-existing bug was caught in the same pass: `pandas.read_csv`'s default NA
+  parsing silently corrupted literal "null"/"NaN" gibberish-test-case text to missing values;
+  fixed via `keep_default_na=False` throughout. **Still outstanding:** template-level
+  paraphrase leakage (as opposed to exact-string) and lexical-shortcut checks (e.g. the
+  classifier keying on a small vocabulary marker rather than genuine semantic understanding)
+  remain unchecked and are flagged as such in the paper's Limitations. Details:
+  `../guard-bear/results/BASELINE_COMPARISON.md`, `../guard-bear/gen-docs/EVAL.md`.
 - **Cross-architecture classifier revalidation.** Table~tab:crossarch's Classifier column
   (Qwen2, SmolLM2, Qwen2.5 — 10 configs) still reflects the pre-quality-pass dataset vintage;
   revalidating requires training age_12_18 counterparts for all 10 configs (not yet done —

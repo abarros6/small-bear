@@ -29,6 +29,11 @@ the inter-role classifier (0.940 accuracy).
 
 See `docs/EXPERIMENTS.md` for current experiment status and remaining forward work.
 
+A companion project, **guard-bear** (sibling repo `../guard-bear/`), is a small input-safety
+classifier that gates access to the response model. It's evaluated independently and presented
+as this project's second contribution alongside the crossover in the submitted manuscript
+(`paper/AISSH_Springer/aissh_final.tex`).
+
 ## Stack
 
 - Base model (primary): `mlx-community/Llama-3.2-3B-Instruct-4bit`

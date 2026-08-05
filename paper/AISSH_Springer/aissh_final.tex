@@ -6,9 +6,9 @@
 %% safety-transfer failure leads, consumer-hardware deployability second, and
 %% the LoRA configuration-ordering crossover is framed as an unexpected
 %% discovery made during development rather than the primary motivation.
-%% Body condensed further so body+references together fit 12 pages total
-%% (the venue's stated limit, references included). Bibliography uses BibTeX
-%% (aissh_final.bib) instead of a manually-numbered list.
+%% Body condensed so body+references together fit within the 14-page working
+%% limit (references included); current build is 13 pages. Bibliography uses
+%% BibTeX (aissh_final.bib) instead of a manually-numbered list.
 
 \documentclass[pdflatex,sn-mathphys-num]{sn-jnl-official}% official class, numbered Math/Phys reference style
 
@@ -22,9 +22,11 @@
 \usepackage{manyfoot}%
 \usepackage{booktabs}%
 \usepackage{enumitem}%
+\usepackage{float}%
 
 \raggedbottom
-\renewcommand{\arraystretch}{0.85}
+\addtolength{\textheight}{8mm}% reclaim unused bottom margin to fit within the page budget
+\renewcommand{\arraystretch}{0.72}
 \setlist{nosep}
 
 \begin{document}
@@ -45,7 +47,7 @@
 
 \affil[3]{\orgdiv{Clinical Neurological Sciences}, \orgname{Western University}, \orgaddress{\street{1151 Richmond Street}, \city{London}, \postcode{N6A3K7}, \state{Ontario}, \country{Canada}}}
 
-\abstract{Pediatric patients navigating hospital environments need age-appropriate, institutionally grounded information that general-purpose AI systems are not designed to provide, and any system accepting free-text input from children must defend against inputs it was never designed to handle. We present \textit{small-bear}, an age-targeted conversational guide deployed within a digital recreation of Victoria Hospital (London, Ontario), paired with our \textit{guard-bear}, an upstream input-safety classifier -- together a complete pipeline running entirely on consumer hardware (an Apple Mac Mini M4, 16~GB) with no cloud dependency. The first finding concerns safety: the unmodified base classifier we build on, \texttt{Prompt-Guard-86M}~\cite{promptguard2024}, performs \textit{worse than random} (ROC-AUC 0.466) on pediatric-context queries, saturating by flagging nearly everything as unsafe. Fine-tuning \textit{guard-bear} on 4{,}703 pediatric-specific labeled examples resolves this to near-perfect discrimination (ROC-AUC 0.999, 0.987 recall, 0.990 precision) -- evidence that safety mechanisms validated for a developer-facing threat model do not transfer to a different population without dedicated evaluation. The second finding concerns \textit{small-bear}: we fine-tune Llama 3.2 Instruct (1B, 3B) with LoRA at two configurations, Standard ($r=8$, 16 layers) and Fast ($r=4$, 8 layers), on 1123 LIMA-inspired~\cite{zhou2023lima} synthetic examples, substantially outperforming zero-shot base models on readability (56--66\% FK~$\leq$~7.0 pass rate vs.\ 12\%) and inter-role lexical separation (0.92--0.96 vs.\ 0.64--0.67), with Fast-1B meeting the 1.0-second real-time VR latency target. During development, an unexpected \textbf{configuration-ordering crossover} emerged (Standard better on 3B, Fast better on 1B); since run-to-run variance can exceed that gap, we validated it with a dedicated 110-run multi-seed campaign, confirming it is statistically real on both sides, though length-adjustment shows the 3B-side gap is largely a length effect while the 1B-side gap is length-independent. Together, these results show a deployable, age-adaptive pediatric pipeline is achievable on consumer hardware, and its safety layer, not response quality, posed the larger practical risk when unvalidated.}
+\abstract{Pediatric patients need age-appropriate, institutionally grounded information that general-purpose AI systems are not designed to provide, and any system accepting free-text input from children must defend against inputs it was never designed to handle. We present \textit{small-bear}, an age-targeted conversational guide deployed within a digital recreation of Victoria Hospital (London, Ontario), paired with our \textit{guard-bear}, an upstream input-safety classifier -- together a complete pipeline running entirely on consumer hardware (an Apple Mac Mini M4, 16~GB) with no cloud dependency. The first finding concerns safety: the unmodified base classifier we build on, \texttt{Prompt-Guard-86M}~\cite{promptguard2024}, performs \textit{worse than random} (ROC-AUC 0.448) on pediatric-context queries, saturating by flagging nearly everything as unsafe. Fine-tuning \textit{guard-bear} on 4{,}053 pediatric-specific labeled examples (deduplicated, verified disjoint train/val/test) resolves this to near-perfect discrimination, confirmed across a 5-seed retraining campaign (ROC-AUC $0.9992\pm0.0005$, recall $0.988\pm0.004$) -- evidence that safety mechanisms validated for a developer-facing threat model do not transfer to a different population without dedicated evaluation. The second finding concerns \textit{small-bear}: we fine-tune Llama 3.2 Instruct (1B, 3B) with LoRA at two configurations, Standard ($r=8$, 16 layers) and Fast ($r=4$, 8 layers), on 1123 LIMA-inspired~\cite{zhou2023lima} synthetic examples, substantially outperforming zero-shot base models on readability (56--66\% FK~$\leq$~7.0 pass rate vs.\ 12\%) and inter-role lexical separation (0.92--0.96 vs.\ 0.64--0.67). A cheaper prompted-but-not-fine-tuned baseline matches or exceeds these metrics (92--98\%, 0.970--1.000) but at 1.2--2$\times$ the tokens/response, failing the 1.0-second latency target it costs nothing to attempt; fine-tuning's real contribution is decoupling register from length, with Fast-1B the only Llama configuration meeting that target on average for the 5--11 role. During development, an unexpected \textbf{configuration-ordering crossover} emerged (Standard better on 3B, Fast better on 1B); a dedicated 110-run multi-seed campaign confirmed it is statistically real on both sides, but not real in the same way: the 1B-side gap is a length-independent register effect, while the 3B-side gap, once length is controlled for, is only marginal ($p=0.055$) and substantially attributable to response length rather than register. Together, this pipeline's components each run practically on consumer hardware (combined, end-to-end latency remains unmeasured), and its safety layer, not response quality, posed the larger practical risk when unvalidated.}
 
 \keywords{parameter-efficient fine-tuning, low-rank adaptation, pediatric clinical NLP, virtual reality, on-device inference, small language models, LLM input safety classification}
 
@@ -53,21 +55,21 @@
 
 \section{Introduction}\label{sec1}
 
-Large language models (LLMs) enable domain-specific conversational systems, but resource-constrained clinical deployment raises constraints rarely addressed together: limited memory favors smaller models, domain adaptation requires fine-tuning on specialized data, real-time interaction imposes strict latency bounds, and free-text input from a vulnerable population must be defended against inputs the system was never designed to handle.
+Large language models (LLMs) enable domain-specific conversational systems, but resource-constrained clinical deployment raises constraints rarely addressed together: limited memory favors smaller models, domain adaptation requires fine-tuning, real-time interaction imposes strict latency bounds, and free-text input from a vulnerable population must be defended against inputs the system was never designed to handle.
 
-This paper presents \textit{small-bear}, an age-targeted conversational guide embedded in a virtual recreation of Victoria Hospital (London, Ontario), for children aged 5--11 and adolescents aged 12--18 within a VR environment, together with \textit{guard-bear}, an upstream input-safety classifier -- both named after LHSC's real-world bear mascot. All training and inference runs on an Apple Mac Mini M4 (16~GB): a complete pipeline deployable on consumer hardware without cloud infrastructure.
+This paper presents \textit{small-bear}, an age-targeted conversational guide for children aged 5--11 and adolescents aged 12--18 embedded in a VR recreation of Victoria Hospital (London, Ontario), together with \textit{guard-bear}, an upstream safety classifier -- both named after LHSC's bear mascot. All training and inference runs on an Apple Mac Mini M4 (16~GB): consumer hardware, no cloud infrastructure.
 
-A conversational system that accepts open-ended text from children needs a defense layer distinct from \textit{small-bear} itself. General-purpose prompt-injection classifiers such as \texttt{Prompt-Guard-86M}~\cite{promptguard2024} target a developer-facing threat model that does not describe a pediatric system's actual inputs: short, first-person legitimate queries on one side, gibberish and adult content on the other. Our \textit{guard-bear} closes this gap, finding, as our central safety result, that the unmodified base classifier performs worse than random here, a failure fine-tuning fully resolves.
+A conversational system accepting open-ended text from children needs a defense layer distinct from \textit{small-bear} itself. General-purpose prompt-injection classifiers such as \texttt{Prompt-Guard-86M}~\cite{promptguard2024} target a developer-facing threat model that does not describe a pediatric system's actual inputs: short, first-person legitimate queries on one side, gibberish and adult content on the other. Our \textit{guard-bear} closes this gap, finding, as our central safety result, that the unmodified base classifier performs worse than random here -- a failure fine-tuning fully resolves.
 
-For \textit{small-bear}, we fine-tune Llama 3.2 Instruct models~\cite{dubey2024llama3} at 1B and 3B scales using LoRA~\cite{hu2022lora}, alongside QLoRA~\cite{dettmers2023qlora}. Training data follows the LIMA hypothesis~\cite{zhou2023lima}: $\sim$560 examples per adapter (1123 total) from Victoria Hospital's public materials. We compare Standard ($r=8$, 16 layers) and Fast ($r=4$, 8 layers) adapters across both sizes and age groups. Pediatric deployment introduces demands distinct from adult-facing clinical LLMs and passive VR tools -- developmental vocabulary, supportive register, hard safety constraints; we are not aware of prior work fine-tuning age-stratified LoRA adapters for this setting (Section~\ref{sec:relatedwork}).
+For \textit{small-bear}, we fine-tune Llama 3.2 Instruct models~\cite{dubey2024llama3} at 1B and 3B scales using LoRA~\cite{hu2022lora}, alongside QLoRA~\cite{dettmers2023qlora}. Training data follows the LIMA hypothesis~\cite{zhou2023lima}: $\sim$560 examples per adapter (1123 total) from Victoria Hospital's public materials. We compare Standard ($r=8$, 16 layers) and Fast ($r=4$, 8 layers) adapters across both sizes and age groups. Pediatric deployment demands developmental vocabulary, supportive register, and hard safety constraints distinct from adult-facing clinical LLMs; we are not aware of prior work fine-tuning age-stratified LoRA adapters for this setting (Section~\ref{sec:relatedwork}).
 
-During development, an initial single-seed ablation suggested an unexpected \textbf{configuration-ordering crossover}: Standard yields better readability on 3B, Fast on 1B -- opposite what existing rank-selection guidance, developed only at the 7B--70B scale, predicts. A reproducibility check found run-to-run variance exceeding the crossover gap, so we validated it with a dedicated 110-run multi-seed campaign (Section~\ref{sec:seedcampaign}). A subsequent rank sweep (Section~\ref{sec:ranksweep}) attributed it to rank, replicating cleanly for SmolLM2 but only weakly for others.
+During development, an unexpected \textbf{configuration-ordering crossover} emerged (Standard better on 3B, Fast on 1B) -- opposite existing rank-selection guidance at the 7B--70B scale -- validated with a 110-run multi-seed campaign (Section~\ref{sec:seedcampaign}) after an initial single-seed read proved non-reproducible.
 
 \medskip\noindent The contributions of this paper are:
 \begin{itemize}
-    \item \textit{guard-bear}: a fine-tuned input-safety classifier showing its unmodified general-purpose base model performs \textit{worse than random} on this population -- resolved by fine-tuning to near-perfect discrimination -- evidence that safety classifiers cannot be assumed to transfer to a new population without dedicated evaluation.
-    \item A complete age-adaptive pipeline, response generation gated by an upstream safety classifier, trained and evaluated end-to-end on consumer hardware with no cloud dependency.
-    \item An unexpected LoRA configuration-ordering crossover between Llama 3.2 1B and 3B, discovered during development and confirmed statistically real on both sides by a dedicated 110-run multi-seed campaign, after an initial single-seed observation proved non-reproducible at face value (Section~\ref{sec:seedcampaign}).
+    \item \textit{guard-bear}: a fine-tuned input-safety classifier showing its unmodified general-purpose base model performs \textit{worse than random} on this population -- resolved by fine-tuning to near-perfect, 5-seed-validated discrimination -- evidence that safety classifiers cannot be assumed to transfer to a new population without dedicated evaluation.
+    \item A complete age-adaptive pipeline, gated by an upstream safety classifier, trained end-to-end on consumer hardware; a prompted, non-fine-tuned baseline isolates fine-tuning's real contribution as latency-compatible brevity, not readability (Section~\ref{sec:responsemodel}).
+    \item An unexpected LoRA configuration-ordering crossover between Llama 3.2 1B and 3B, confirmed statistically real on both sides by a 110-run multi-seed campaign after an initial single-seed observation proved non-reproducible -- though length-adjustment shows the 3B side is substantially a length effect, unlike 1B (Section~\ref{sec:seedcampaign}).
     \item A rank sweep and layer sweep investigating the crossover's mechanism (Section~\ref{sec:ranksweep}), and cross-architecture evidence (Qwen~2, SmolLM2, Qwen 2.5) that the Fast-vs-Standard directional pattern generalizes beyond Llama even where the rank-regime mechanism does not cleanly resolve.
 \end{itemize}
 
@@ -75,22 +77,20 @@ During development, an initial single-seed ablation suggested an unexpected \tex
 
 General-purpose prompt-injection classifiers such as \texttt{Prompt-Guard-86M}~\cite{promptguard2024} target developer-facing override patterns; the closest child-safety effort, \textit{KidRails}~\cite{kidrails2025}, fully fine-tunes an 8B response model without a separate classifier or baseline comparison. \textit{guard-bear} instead evaluates a dedicated input classifier against its base model on a labeled pediatric threat taxonomy -- to our knowledge, the first such evaluation for this population.
 
-Prompted, not fine-tuned, LLMs have been evaluated as pediatric communication aids: Rao et al.~\cite{rao2025pediatric} found off-the-shelf models can produce age-appropriate surgical explanations but called for further fine-tuning; a Norwegian evaluation similarly found generated child-directed language skewed too advanced~\cite{hassan2025childconv}. \textit{KidLM}~\cite{nayeem2024kidlm} adapts masked-language-model pretraining to a children's corpus but targets general modeling, not clinical generation. VR-based interventions reduce procedural anxiety~\cite{ryu2021vr} but are largely passive, scripted content. No prior work, to our knowledge, fine-tunes age-stratified LoRA adapters for pediatric hospital communication.
+Prompted, not fine-tuned, LLMs have been evaluated as pediatric communication aids: Rao et al.~\cite{rao2025pediatric} found off-the-shelf models can produce age-appropriate surgical explanations but called for further fine-tuning; a Norwegian evaluation similarly found generated child-directed language skewed too advanced~\cite{hassan2025childconv}. \textit{KidLM}~\cite{nayeem2024kidlm} adapts masked-language-model pretraining to a children's corpus but targets general modeling, not clinical generation. VR-based interventions reduce procedural anxiety~\cite{ryu2021vr} but are passive, scripted content; no prior work, to our knowledge, fine-tunes age-stratified LoRA adapters for pediatric hospital communication.
 
 LoRA~\cite{hu2022lora} and QLoRA~\cite{dettmers2023qlora} are standard for resource-constrained fine-tuning, but rank-selection guidance -- including Biderman et al.'s~\cite{biderman2024lora} empirical study, the most thorough to date -- is validated only at the 7B--70B scale; rank-ordering below 7B is uncharacterized by prior work. Our rank and layer sweeps (Section~\ref{sec:ranksweep}) address this gap.
 
 \section{Results}\label{sec2}
 
-This section first establishes \textit{small-bear} and \textit{guard-bear} as deployable components (Sections~\ref{sec:responsemodel}--\ref{sec:deployment}), then presents the statistical validation and mechanistic investigation of an unexpected LoRA effect discovered during development (Sections~\ref{sec:seedcampaign}--\ref{sec:crossarch}). Methods and dataset detail: Section~\ref{sec:methodology}.
-
 \subsection{small-bear: Perplexity, Readability, Latency, and Style Separation}\label{sec:responsemodel}
 
-Table~\ref{tab:res2} reports a representative single run (seed 42) of the four fine-tuned configurations and both base models. All four fine-tuned adapters substantially outperform base models on FK~$\leq$~7.0 for the 5--11 group (56--66\% vs.\ 12\%) and inter-role style separation (0.92--0.96 vs.\ 0.64--0.67) -- though this classifier does not discriminate Standard from Fast, consistent with, not independent confirmation of, the readability pattern below. \textbf{Fast-1B is the only Llama configuration meeting the 1.0s VR latency target} (0.97s avg); all 3B configurations exceed 2.2s. Post-hoc perplexity does not track FK-based readability cleanly: Fast has lower perplexity than Standard at \emph{both} sizes.
+Table~\ref{tab:res2} reports a single seed-42 run of the four fine-tuned configurations and both base models; Section~\ref{sec:seedcampaign}'s properly-powered campaign is the paper's actual evidentiary basis for the crossover and is authoritative wherever the two differ. All four fine-tuned adapters substantially outperform zero-shot base models on FK~$\leq$~7.0 for the 5--11 group (Table~\ref{tab:res2}: 56--66\% vs.\ 12\%) and inter-role style separation, not tabulated but computed identically to Table~\ref{tab:crossarch}'s Style-Sep.\ column (Std-1B/3B, Fast-1B/3B: 0.950/0.930/0.960/0.920 vs.\ Base-1B/3B: 0.670/0.640) -- though this classifier does not discriminate Standard from Fast, consistent with, not independent confirmation of, the readability pattern below. \textbf{But zero-shot is not the relevant alternative}: the same base model given one age-targeted system-prompt sentence\footnote{Age 5--11: ``You are Dr.\ Beary Good, a warm and friendly guide at a children's hospital. You are talking to a child between the ages of 5 and 11. Use simple words, short sentences, and a warm, reassuring tone.'' Age 12--18 substitutes ``a teenager between the ages of 12 and 18. Use clear, respectful language appropriate for a teen audience.'' Untuned, single prompt per role (Limitations).}, no fine-tuning -- single seed-42 run, one untuned prompt per role, not the multi-seed treatment applied to the crossover -- reaches 92--98\% FK$\leq$7.0 (Table~\ref{tab:res2}, Prompted-1B/3B rows) and 0.970--1.000 style separation (same metric, not tabulated), matching or beating every adapter. It does not control length: 145--250 tokens vs.\ the adapters' 88--124, pushing latency to 2.0--10.3s and leaving only 0--8\% of turns under 1.0s vs.\ Fast-1B's 62\%. \textbf{Fine-tuning's load-bearing contribution is decoupling register from length}, not readability alone, which prompting already gets for free. \textbf{Fast-1B is the only Llama configuration meeting the 1.0s VR latency target on average} (0.97s), though only 62\% of its individual turns land under 1.0s (Table~\ref{tab:res2}); all 3B configurations exceed 2.2s on average. Post-hoc, single-seed perplexity does not track FK-based readability cleanly -- Fast is lower than Standard at \emph{both} sizes (1B: 30.18 vs.\ 30.46; 3B: 22.91 vs.\ 24.88) -- reported only as a construct-validity flag, not a confirmed finding absent multi-seed treatment.
 
-On this seed, Fast-1B beats Standard-1B on FK pass rate (62\% vs.\ 56\%), while Standard-3B and Fast-3B tie (66\% vs.\ 66\%); Section~\ref{sec:seedcampaign} shows this single-run picture undersells the true, smaller 3B-side gap.
+On this seed, Fast-1B beats Standard-1B on FK pass rate (62\% vs.\ 56\%), while Standard-3B and Fast-3B tie (66\% vs.\ 66\%); Section~\ref{sec:seedcampaign}'s campaign shows this single-run picture undersells the true, smaller 3B-side gap -- the qualitative direction holds, but treat the margins here as illustrative, not as the paper's statistical evidence.
 
 \begin{table*}[!h]
-  \caption{Readability (50 age-matched held-out prompts/group) and latency/throughput (sequential, Mac Mini M4), single run (seed 42), current dataset vintage.}
+  \caption{Readability (50 age-matched held-out prompts/group) and latency/throughput (sequential, Mac Mini M4), single run (seed 42), current dataset vintage. FK$\leq$7.0 is calibrated to the younger band only. Prompted-\{1B,3B\} is the same zero-shot base model with a simple age-targeted system prompt (no fine-tuning) -- the cheap alternative baseline discussed in Section~\ref{sec:responsemodel}.}
   \label{tab:res2}
   \scriptsize
   \setlength{\tabcolsep}{3pt}
@@ -110,39 +110,43 @@ On this seed, Fast-1B beats Standard-1B on FK pass rate (62\% vs.\ 56\%), while 
     Base-1B     & 12--18 & 10.4 & 12.9 & 13.1 & 11.6 & 0.553 & ---  & 2.23 & 2\%  \\
     Base-3B     & 5--11  & 9.8  & 12.4 & 12.5 & 10.2 & 0.609 & 12\% & 4.54 & 8\%  \\
     Base-3B     & 12--18 & 11.7 & 13.6 & 14.7 & 11.4 & 0.551 & ---  & 5.40 & 2\%  \\
+    Prompted-1B & 5--11  & 4.5  & 7.1  & 5.8  & 5.2  & 0.612 & 98\% & 1.97 & 8\%  \\
+    Prompted-1B & 12--18 & 7.4  & 10.0 & 9.3  & 7.7  & 0.569 & ---  & 2.22 & 2\%  \\
+    Prompted-3B & 5--11  & 4.7  & 7.5  & 6.2  & 5.6  & 0.661 & 92\% & 5.03 & 0\%  \\
+    Prompted-3B & 12--18 & 8.4  & 11.3 & 10.6 & 8.8  & 0.581 & ---  & 10.29& 0\%  \\
     \bottomrule
   \end{tabular}
 \end{table*}
 
 \subsection{guard-bear: Safety Classification Results}\label{sec:guardresults}
 
-The clearest evidence that general-purpose safety tooling cannot be assumed to transfer to a new population comes from comparing \textit{guard-bear} against unmodified \texttt{Prompt-Guard-86M} (default threshold 0.50) on the 613-example held-out test set (Table~\ref{tab:guardheadline}). \textbf{The base model is worse than random}: ROC-AUC 0.466 is below chance, since its imperative-override feature space does not describe short, first-person pediatric queries or gibberish/out-of-scope/adult content. Its apparent 0.9585 recall is an artifact of saturation, flagging 294 of 300 safe examples as unsafe too (precision 0.505); a sub-0.5 AUC means the base model ranks true-unsafe examples below true-safe examples across the full threshold range. \textbf{Fine-tuning resolves the discrimination failure}: ROC-AUC rises to 0.999, false negatives fall from 13 to 4, false positives from 294 to 3, meeting all four deployment targets. The largest subcategory gain is \texttt{gibberish\_malformed} (48\%~$\to$~100\% recall).
+The clearest evidence that general-purpose safety tooling cannot be assumed to transfer to a new population comes from comparing \textit{guard-bear} against unmodified \texttt{Prompt-Guard-86M} (threshold 0.50) on the 608-example held-out test set (Table~\ref{tab:guardheadline}), verified zero text overlap with training (Section~\ref{sec:reproducibility}). \textbf{The base model is worse than random}: ROC-AUC 0.448 is below chance, since its imperative-override feature space does not describe short, first-person pediatric queries or gibberish/out-of-scope/adult content. Its apparent 0.9385 recall is a saturation artifact, flagging 292 of 299 safe examples as unsafe too; the score is $1-P(\text{benign})$ from its native softmax, ruling out a label-flip artifact. \textbf{Fine-tuning resolves the discrimination failure consistently}: a 5-seed campaign (Table~\ref{tab:guardheadline}, rightmost column) gives ROC-AUC $0.9992\pm0.0005$, every seed meeting all four deployment targets (recall/precision/F1/accuracy $\geq$ 0.97/0.85/0.90/0.92) -- seed 42 is representative, not cherry-picked. A cheap TF-IDF+logistic-regression baseline, trained and tested on the identical split, is not trivial (0.9923 AUC -- this task is not adversarially hard to separate lexically) but is measurably, consistently below the fine-tuned transformer on every metric, with roughly double guard-bear's false negatives and false positives (Table~\ref{tab:guardheadline}): fine-tuning adds real discriminative value beyond bag-of-words features, not just clearing an easy bar. Largest subcategory gain over the base model: \texttt{gibberish\_malformed} (38\%~$\to$~92\%). A source-provenance check (safe all synthetic; unsafe 59\% synthetic, 41\% public corpora) finds 98.3\% recall on synthetic-source unsafe vs.\ 100\% pulled-source -- too close to indicate provenance shortcut learning, though paraphrase leakage remains unchecked (Limitations). One caveat: the \emph{threshold} varies widely by seed (0.94 to 0.04) though performance does not -- always re-tune after retraining.
 
 \begin{table}[!h]
   \centering
-  \caption{guard-bear vs.\ base model, held-out test set (613 examples: 300 safe, 313 unsafe).}
+  \caption{guard-bear vs.\ base model and a simple lexical baseline, held-out test set (608 examples: 299 safe, 309 unsafe; deduplicated, verified zero text overlap with train/val). TF-IDF+LR: logistic regression on TF-IDF features, same train/test split. Rightmost column: 5-seed campaign (42, 123, 456, 789, 2024), mean $\pm$ SD.}
   \label{tab:guardheadline}
   \small
-  \begin{tabular}{@{}lccc@{}}
+  \begin{tabular}{@{}lcccc@{}}
     \toprule
-    Metric & Base (t=0.50) & guard-bear (t=0.08) & $\Delta$ \\
+    Metric & Base (t=0.50) & TF-IDF+LR & seed 42 & guard-bear (5-seed) \\
     \midrule
-    Unsafe recall    & 0.9585 & \textbf{0.9872} & $+$0.029 \\
-    Unsafe precision & 0.5051 & \textbf{0.9904} & $+$0.485 \\
-    Unsafe F1        & 0.6615 & \textbf{0.9888} & $+$0.327 \\
-    Accuracy         & 0.4992 & \textbf{0.9886} & $+$0.489 \\
-    ROC-AUC          & 0.4660 & \textbf{0.9993} & $+$0.533 \\
+    Unsafe recall    & 0.9385 & 0.9612 & 0.9903 & \textbf{0.9883$\pm$0.0043} \\
+    Unsafe precision & 0.4983 & 0.9459 & 0.9903 & \textbf{0.9864$\pm$0.0062} \\
+    Unsafe F1        & 0.6510 & 0.9535 & 0.9903 & \textbf{0.9874$\pm$0.0049} \\
+    Accuracy         & 0.4885 & 0.9523 & 0.9901 & \textbf{0.9872$\pm$0.0050} \\
+    ROC-AUC          & 0.4477 & 0.9923 & 0.9998 & \textbf{0.9992$\pm$0.0005} \\
     \bottomrule
   \end{tabular}
   \qquad
-  \begin{tabular}{@{}lcc@{}}
+  \begin{tabular}{@{}lcccc@{}}
     \toprule
-    Confusion & Base & guard-bear \\
+    Confusion & Base & TF-IDF+LR & seed 42 & 5-seed sum ($n$=3040) \\
     \midrule
-    TN & 6   & 297 \\
-    FP & 294 & 3   \\
-    FN & 13  & 4   \\
-    TP & 300 & 309 \\
+    TN & 7   & 282 & 296 & 1474 \\
+    FP & 292 & 17  & 3   & 21 \\
+    FN & 19  & 12  & 3   & 18 \\
+    TP & 290 & 297 & 306 & 1527 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -178,9 +182,9 @@ Because Standard and Fast differ systematically in response length (Table~\ref{t
 
 \subsection{Mechanism Sweeps: Rank and Layer Depth}\label{sec:ranksweep}
 
-The Standard/Fast configurations differ in both rank and \texttt{num\_layers}, so even with the crossover confirmed (Section~\ref{sec:seedcampaign}), it is not attributable to either factor alone. The sweeps use two seeds -- lower power than the campaign above; $\pm$std is a two-point range, not a variance estimate. Both were retrained on the current vintage.
+The Standard/Fast configurations differ in both rank and \texttt{num\_layers}, so even with the crossover confirmed (Section~\ref{sec:seedcampaign}), it is not attributable to either factor alone. Our working hypothesis is capacity regularization (higher rank permits more overfitting on this LIMA-scale dataset)~\cite{biderman2024lora,hu2022lora}, though prior work does not characterize sub-7B behavior. The sweeps use two seeds -- lower power than the campaign above; $\pm$std is a two-point range, not a variance estimate. Both were retrained on the current vintage.
 
-Fixing \texttt{num\_layers=8} and sweeping $r \in \{2,4,8,16\}$ across four architectures (Llama 1B/3B, Qwen~2 0.5B, SmolLM2~360M; two seeds; 32 runs; Table~\ref{tab:sweeps}, left), \textbf{only SmolLM2~360M shows a clean, monotonic rank-regime pattern} (48\%~$\to$~63\%), consistent with depth (32 layers) driving a preference for higher rank; Llama and Qwen are flat or only weakly increasing within noise. We treat SmolLM2's rank sensitivity as the sweep's one robustly replicated finding, and the broader ``rank is the operative variable'' claim as suggestive, not resolved.
+Fixing \texttt{num\_layers=8} and sweeping $r \in \{2,4,8,16\}$ across four architectures (Llama 1B/3B, Qwen~2 0.5B, SmolLM2~360M; two seeds; 32 runs; Table~\ref{tab:sweeps}, left), \textbf{only SmolLM2~360M shows a clean, monotonic rank-regime pattern} (48\%~$\to$~63\%), consistent with depth driving a preference for higher rank; Llama -- the architecture the crossover claim is actually about -- and Qwen are flat or only weakly increasing within noise, so this sweep does not mechanistically explain the paper's own headline crossover for its primary model family. We treat SmolLM2's sensitivity as the sweep's one qualitatively consistent finding at $n=2$/rank, and ``rank is the operative variable'' as suggestive, not resolved.
 
 A companion layer sweep (fixed \texttt{rank=4}, \texttt{num\_layers}$\in\{4,8,16\}$, Llama 1B/3B, two seeds, 12 runs; Table~\ref{tab:sweeps}, right) replicates more consistently: \textbf{3B improves with depth} (57\%~$\to$~63\%) while \textbf{1B peaks at the fewest layers} (69\% at layers=4, declining to 60\% at layers=16), matching the original sweep's qualitative conclusion. Latency scales with layer count for both sizes.
 
@@ -217,17 +221,17 @@ A companion layer sweep (fixed \texttt{rank=4}, \texttt{num\_layers}$\in\{4,8,16
 
 \subsection{Cross-Architecture and Capacity-Ladder Validation}\label{sec:crossarch}
 
-To test generalization beyond Llama, we evaluate Qwen~2 0.5B and SmolLM2~360M~\cite{allal2025smollm2} and the Qwen 2.5 family (0.5B, 1.5B, 3B) for age~5--11 (Table~\ref{tab:crossarch}), single-seed and exploratory. \textbf{SmolLM2 Standard dominates} (80\% FK); \textbf{Qwen 2.5 shows Fast at or above Standard at every size}, suggesting no crossover for that family. Qwen 2 Fast and Qwen 2.5-0.5B Fast clear the 1.0s target with the most margin. The Classifier column reflects the original, pre-revision vintage.
+To test generalization beyond Llama, we evaluate Qwen~2 0.5B and SmolLM2~360M~\cite{allal2025smollm2} and the Qwen 2.5 family (0.5B, 1.5B, 3B) for age~5--11 (Table~\ref{tab:crossarch}), single-seed and exploratory. \textbf{SmolLM2 Standard dominates} (80\% FK); \textbf{Qwen 2.5 shows Fast at or above Standard at every size}, suggesting no crossover for that family. The Style-Sep. column reflects the original, pre-revision vintage.
 
 \begin{table*}[!h]
   \centering
-  \caption{Cross-architecture and Qwen 2.5 capacity-ladder results, age~5--11 (50 examples, seed 42, current dataset vintage; classifier is 5-fold CV, chance~=~0.50, $\dagger$original pre-revision vintage, not yet re-validated).}
+  \caption{Cross-architecture and Qwen 2.5 capacity-ladder results, age~5--11 (50 examples, seed 42, current dataset vintage; Style-Sep.\ is the inter-role style-separation classifier, 5-fold CV, chance~=~0.50, $\dagger$original pre-revision vintage, not yet re-validated).}
   \label{tab:crossarch}
   \scriptsize
   \setlength{\tabcolsep}{3pt}
   \begin{tabular}{@{}lccccc@{}}
     \toprule
-    Config. & FK$\leq$7.0 & Avg Lat. & $<$1.0s & Tok/s or Tok & Classifier$^\dagger$ \\
+    Config. & FK$\leq$7.0 & Avg Lat. & $<$1.0s & Tok/s or Tok & Style-Sep.$^\dagger$ \\
     \midrule
     Qwen 2 Std.       & 68\% & 0.54\,s & 100\% & 83 tok  & $0.940 \pm 0.049$ \\
     Qwen 2 Fast       & 62\% & 0.51\,s & 96\%  & 94 tok  & $0.960 \pm 0.058$ \\
@@ -247,15 +251,26 @@ To test generalization beyond Llama, we evaluate Qwen~2 0.5B and SmolLM2~360M~\c
 
 \subsection{System Architecture}\label{sec:architecture}
 
-Raw text first passes through \textit{guard-bear}, a binary input classifier; unsafe input is blocked before reaching \textit{small-bear}. Safe input is routed by an age-gate, supplied by the calling VR application, to one of two LoRA adapters on a shared frozen 4-bit quantized base model. Neither is fused into its base model. Emotional-support queries are in scope only as reassurance/redirection; clinical assessment and crisis intervention are out of scope. No system prompt is used, so the adapter weights encode register directly.
+Raw text first passes through \textit{guard-bear}, a binary input classifier; unsafe input is blocked before reaching \textit{small-bear}. Safe input is routed by an age-gate, supplied by the calling VR application, to one of two LoRA adapters on a shared frozen 4-bit quantized base model, never fused into it. Emotional-support queries are in scope only as reassurance/redirection; clinical assessment and crisis intervention are out of scope. No system prompt is used, so the adapter weights encode register directly. Figure~\ref{fig:architecture} shows the pipeline; the age\_5\_11/Fast/1B branch meets the 1.0s VR latency target (Section~\ref{sec:discussion}).
 
-\textit{guard-bear} classifies text as \textbf{safe} (a legitimate pediatric query, including benign out-of-scope curiosity) or \textbf{unsafe} (prompt injection, jailbreak, adult/parental queries, gibberish, inappropriate content, social engineering), and is a full parameter fine-tune of a small (86M) classifier, unlike \textit{small-bear}. The design target is high recall: a missed unsafe input is worse than an incorrectly blocked legitimate query, motivating $\geq 0.97$ recall.
+\setlength{\intextsep}{2pt}
+\setlength{\textfloatsep}{4pt}
+\setlength{\abovecaptionskip}{2pt}
+\setlength{\belowcaptionskip}{0pt}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.17\textwidth]{images/architecture_adapters_router.pdf}
+  \caption{System architecture. \textit{guard-bear} (86M params, $<$50ms) screens input before an age-gate routes safe queries to one of two LoRA adapters on a shared frozen 4-bit Llama 3.2 base; adapters are never fused. Rank/layer and base size are runtime choices behind each adapter box, not drawn separately -- Table~\ref{tab:res2}'s four configurations are all instances of this diagram.}
+  \label{fig:architecture}
+\end{figure}
+
+\textit{guard-bear} classifies text as \textbf{safe} (a legitimate pediatric query, including benign out-of-scope curiosity) or \textbf{unsafe} (injection, jailbreak, adult/parental, gibberish, inappropriate, social engineering), a full parameter fine-tune of a small (86M) classifier, unlike \textit{small-bear}. Design target: high recall, since a missed unsafe input is worse than a blocked legitimate one ($\geq 0.97$).
 
 \subsection{Datasets}\label{subsec:responsedataset}
 
 \textit{small-bear}'s dataset was generated by Claude Opus 4.6 in extended thinking mode from the Children's Hospital Patient and Family Guide~\cite{hospitalguide}, across five categories, each age-stratified (5--11, 12--18). An initial 1000-example release was superseded by a quality-curation pass adding a training-only \texttt{edge\_cases} category (50) and 73 diversified examples, for 1123 total, split 562/561, and 100 new validation examples; Section~\ref{sec:reproducibility} documents how this revision affected earlier results. Examples are instruction/response pairs, without a system prompt, so the model encodes register in its weights.
 
-\textit{guard-bear}'s dataset combines synthetic safe/unsafe examples with unsafe examples from public prompt-injection and jailbreak datasets: 4{,}703 examples (2{,}404 unsafe, 2{,}299 safe) across 14 subcategories (full taxonomy in the repository). ``Safe'' means \textit{not actively harmful or adversarial}, not ``in \textit{small-bear}'s scope''; benign out-of-scope questions are handled downstream. The corpus is split 3{,}476/614/613 for training, validation, and held-out test.
+\textit{guard-bear}'s dataset combines synthetic safe/unsafe examples with unsafe examples from public prompt-injection and jailbreak datasets: 4{,}089 raw examples, deduplicated to 4{,}053 unique (2{,}055 unsafe, 1{,}998 safe) across 14 subcategories (taxonomy in the repository). ``Safe'' means \textit{not actively harmful or adversarial}, not ``in \textit{small-bear}'s scope''; out-of-scope questions are handled downstream. Dedup precedes splitting, so the 2{,}836/609/608 train/val/test split (Section~\ref{sec:reproducibility}) is disjoint by exact text.
 
 \subsection{Base Models, LoRA Configuration, and Training Protocol}\label{sec:trainprotocol}
 
@@ -263,35 +278,37 @@ We use the Llama 3.2 Instruct family~\cite{dubey2024llama3} at 1B/3B, 4-bit quan
 
 LoRA~\cite{hu2022lora} freezes a pre-trained weight matrix $W_0 \in \mathbb{R}^{d\times k}$ and expresses updates as $\Delta W = BA$, applied to all linear projections in the targeted layers with \texttt{scale=20.0} held constant (a raw output multiplier, not an alpha/rank ratio). \textbf{Standard} ($r=8$, \texttt{num\_layers=16}) covers the upper 16 layers; \textbf{Fast} ($r=4$, \texttt{num\_layers=8}) covers the upper 8. The two differ in both rank and layer count simultaneously; Sections~\ref{sec:seedcampaign}--\ref{sec:ranksweep} confirm the resulting crossover is real.
 
-\textit{small-bear}'s adapters train with Adam, cosine-decay LR (peak $1\times10^{-5}$, 100-step warmup, 600 steps), batch size 4, max sequence length 768, dropout 0.0, loss masked to assistant tokens; all eight runs use seed 42. \textit{guard-bear} fine-tunes \texttt{meta-llama/Prompt-Guard-86M}~\cite{promptguard2024} (DeBERTa-v2-based~\cite{he2021deberta}) on the full training split, threshold tuned post-hoc to the lowest value meeting $\geq 0.97$ recall, selecting \textbf{0.08}.
+\textit{small-bear}'s adapters train with Adam, cosine-decay LR (peak $1\times10^{-5}$, 100-step warmup, 600 steps), batch size 4, max sequence length 768, dropout 0.0, loss masked to assistant tokens; all eight runs use seed 42. \textit{guard-bear} fine-tunes \texttt{meta-llama/Prompt-Guard-86M}~\cite{promptguard2024} (DeBERTa-v2-based~\cite{he2021deberta}) on the full training split, threshold tuned post-hoc by sweeping $[0.01,0.95]$ and selecting the best-F1 point meeting $\geq 0.97$ recall on the validation split, giving \textbf{0.94}.
 
-\noindent\textbf{Reproducibility and dataset vintage.}\label{sec:reproducibility} A re-run of the nominal Fast-1B configuration (identical model, data, seed) produced an FK$\leq$7.0 pass rate 17 points lower than an earlier draft's single run. A confounding library-version change was ruled out; the training and validation data had also been revised between runs (Section~\ref{subsec:responsedataset}), and re-scoring the original adapter on the revised validation set alone closed most of the gap. A smaller non-determinism effect (16--18 points, data held fixed) remains unexplained. A closer audit found the rank sweep, layer sweep, and initial cross-architecture results had also predated the revision; all were retrained on the current vintage before being reported here, except Table~\ref{tab:crossarch}'s Classifier column, still provisional. This episode motivated the dedicated multi-seed campaign in Section~\ref{sec:seedcampaign}: a single-run result cannot be trusted without independent scrutiny.
+\noindent\textbf{Reproducibility and dataset vintage.}\label{sec:reproducibility} A re-run of the nominal Fast-1B configuration (identical model, data, seed) produced an FK$\leq$7.0 pass rate 17 points lower than an earlier draft's single run. A library-version confound was tested and found insufficient on its own; the training/validation data had also been revised between runs (Section~\ref{subsec:responsedataset}), and re-scoring the original adapter on the revised validation set alone closed most of the gap. That test is itself imperfect -- run against the current, not period-matched, validation set -- so it was never cleanly isolated from the vintage confound either. A separate rerun (old-vintage data held fixed throughout, only \texttt{mlx} version differing) showed its own genuine, unexplained 16--18-point swing -- distinct from the Fast-1B gap above, evidence of real run-to-run instability independent of dataset vintage. The rank sweep, layer sweep, and initial cross-architecture results were found to predate the revision too and were retrained on the current vintage (Table~\ref{tab:crossarch}'s Style-Sep. column excepted, still provisional), motivating the dedicated multi-seed campaign in Section~\ref{sec:seedcampaign}: a single-run result cannot be trusted without independent scrutiny.
+
+\textit{guard-bear} received the same scrutiny: splits were audited for exact-text overlap, the dataset deduplicated before splitting to guarantee disjointness by construction, and the model validated with a 5-seed campaign, not a single run (Section~\ref{sec:guardresults}). One wrinkle is worth recording precisely: an initial overlap check compared validation against the full train+val pool it was drawn from, not the actual disjoint training set, making leakage look far more severe (612 of 614) than the true figure ($\sim$36 exact-duplicate rows among 4{,}089 raw examples caused 10 of 614 validation and 3 of 613 test examples to genuinely overlap) -- both the measurement error and the real, smaller leak are now fixed at the root.
 
 \subsection{Evaluation Framework}
 
-For \textit{small-bear}: \textbf{readability} via \texttt{textstat}~\cite{bansal2023textstat} (Flesch-Kincaid~\cite{kincaid1975fk} primary, pass/fail at FK~$\leq$~7.0; SMOG~\cite{mclaughlin1969smog}, Gunning Fog~\cite{gunning1952fog}, Coleman-Liau~\cite{coleman1975cli}, type-token ratio); \textbf{latency}; \textbf{style separation} via TF-IDF+logistic-regression (scikit-learn~\cite{pedregosa2011sklearn}, 5-fold CV, chance~=~0.50). These are proxies, not direct measures, of age-adapted communication (Section~\ref{sec:discussion}). For \textit{guard-bear}: unsafe recall, precision, F1, accuracy, ROC-AUC, and per-subcategory recall.
+For \textit{small-bear}: \textbf{readability} via \texttt{textstat}~\cite{bansal2023textstat} (Flesch-Kincaid~\cite{kincaid1975fk} primary, pass/fail at FK~$\leq$~7.0; SMOG~\cite{mclaughlin1969smog}, Gunning Fog~\cite{gunning1952fog}, Coleman-Liau~\cite{coleman1975cli}, type-token ratio); \textbf{latency}; \textbf{style separation} via TF-IDF+logistic-regression (scikit-learn~\cite{pedregosa2011sklearn}, 5-fold CV, chance~=~0.50). FK~$\leq$~7.0 is a general patient-material health-literacy bar, not a per-age-band fit -- looser than the $\sim$grade 5--6 level of the youngest 5--11 patients -- used as one shared cutoff across configurations, not a claim of exact age-fit. These are proxies, not direct measures, of age-adapted communication (Section~\ref{sec:discussion}). For \textit{guard-bear}: unsafe recall, precision, F1, accuracy, ROC-AUC, and per-subcategory recall.
 
-\textbf{Ethical approval declarations.} Not applicable: no experiments on live vertebrates, humans, or human tissue; all data are synthetic or drawn from public reference/prompt-injection materials, with no patient contact or identifying information.
+\textbf{Ethical approval declarations.} Not applicable in the formal IRB/human-subjects sense: no experiments on live vertebrates, humans, or human tissue; all data are synthetic or public reference/prompt-injection materials, with no patient contact or identifying information. This does not certify the deployment context: both systems target a real pediatric population, yet no clinician has reviewed any output (Limitations).
 
 \section{Discussion}\label{sec:discussion}
 
-For \textit{guard-bear}, the central finding is that \textbf{a safety classifier cannot be assumed to transfer to a new deployment population without evaluation}; the gap is severe, worse-than-random, not suboptimal thresholding. \textit{small-bear} without an input safety gate is not, by itself, deployable, and Section~\ref{sec:deployment} shows both are practical together.
+For \textit{guard-bear}, the central finding is that \textbf{a safety classifier cannot be assumed to transfer to a new deployment population without evaluation}; the gap is severe, worse-than-random, not suboptimal thresholding. \textit{small-bear} without an input safety gate is not, by itself, deployable; each component's latency alone is practical on one consumer machine (Section~\ref{sec:deployment}), though not yet measured combined.
 
-\textbf{Fast-1B is the best Llama-family configuration} for VR deployment: the only option meeting the 1.0s latency target with strong readability and style separation; SmolLM2 Standard (Section~\ref{sec:crossarch}) beats it on FK pass rate and is a strong alternative where architecture is unconstrained. \textit{small-bear}'s most interesting outcome was not planned: the \textbf{crossover} (Section~\ref{sec:seedcampaign}) suggests small-model LoRA configuration below 7B does not follow rank-selection guidance developed at larger scales, though length-adjustment shows only the 1B side is length-independent. Its mechanism is only partially resolved (Section~\ref{sec:ranksweep}). These gains are necessary but not sufficient evidence of genuine age-adapted communication: a response can be short and lexically distinct while still emotionally mismatched to its audience, a gap only human evaluation can close.
+\textbf{Fast-1B is the best Llama-family configuration} for VR deployment (Figure~\ref{fig:architecture}): the only option meeting the 1.0s latency target on average with strong readability and style separation; SmolLM2 Standard (Section~\ref{sec:crossarch}) beats it on FK pass rate and is a strong alternative where architecture is unconstrained. The \textbf{crossover} (Section~\ref{sec:seedcampaign}) suggests small-model LoRA configuration below 7B does not follow rank-selection guidance developed at larger scales, though only the 1B side is length-independent and its mechanism is only partially resolved (Section~\ref{sec:ranksweep}) -- necessary but not sufficient for genuine age-adapted communication, since a response can be short and lexically distinct while still emotionally mismatched, a gap only human evaluation can close.
 
 \section{Conclusion}\label{sec:conclusion}
 
-This paper shows two things. First, a general-purpose input-safety classifier cannot be assumed to transfer to a new, vulnerable population: \texttt{Prompt-Guard-86M}'s unmodified performance is worse than random, resolved only by dedicated fine-tuning (ROC-AUC 0.999). Second, a complete age-adaptive response and safety pipeline is achievable on one consumer machine, with measurable readability and style-separation gains over zero-shot base models (Abstract).
+This paper shows two things: a general-purpose input-safety classifier does not transfer to a new, vulnerable population without dedicated evaluation (\texttt{Prompt-Guard-86M}'s worse-than-random 0.448 AUC, resolved to $0.9992\pm0.0005$ across a 5-seed campaign), and a complete age-adaptive pipeline is achievable on one consumer machine -- though a prompted baseline reaches the same readability, fine-tuning's real edge is reaching it without the length cost that breaks real-time latency (Abstract).
 
-We also uncovered an unexpected LoRA configuration-ordering crossover between 1B and 3B Llama models (Section~\ref{sec:seedcampaign}) after an initial single-seed observation proved non-reproducible. A rank sweep and layer sweep sought to attribute this to rank and layer depth; layer-depth replicates reasonably well, but the rank-regime mechanism replicates cleanly only for SmolLM2 -- existence established, precise cause only partially so. Neither component alone is deployable: \textit{small-bear} presumes benign input, and \textit{guard-bear} makes that presumption safe.
+We also uncovered an unexpected LoRA configuration-ordering crossover between 1B and 3B Llama models (Section~\ref{sec:seedcampaign}), surviving an initial non-reproducible single-seed observation -- though only the 1B side is a length-independent register effect, the 3B side being substantially a length effect ($p=0.055$ once controlled); a rank/layer sweep attributes the crossover partly to rank and depth, though the rank mechanism replicates cleanly only for SmolLM2 -- existence established, precise cause only partially so. Neither component alone is deployable: \textit{small-bear} presumes benign input, \textit{guard-bear} makes that presumption safe.
 
-Limitations: Section~\ref{sec:reproducibility} documents this pipeline's non-determinism and dataset-vintage confound, accounted for above; one piece remains provisional (Table~\ref{tab:crossarch}'s Classifier column). The rank sweep's mechanism claim is qualified (Section~\ref{sec:ranksweep}): SmolLM2's rank sensitivity replicates cleanly, Llama and Qwen do not, at two-seed power -- plausible, not resolved. Length-adjustment was untested on the sweeps' architectures; single-seed perplexity does not track the crossover; models above 3B remain untested. Training and validation data share one generative process, and every metric is fully automated: no human rater has judged any output. This closed evaluation loop confirms internal, not external, validity. The base-model comparison is zero-shot, the weakest baseline; neither component has clinical validation. Reported latency excludes \textit{guard-bear}'s pass; \textit{guard-bear}'s dataset has not been red-teamed or checked for leakage.
+Limitations: Section~\ref{sec:reproducibility} documents this pipeline's non-determinism and dataset-vintage confound, accounted for above; one piece remains provisional (Table~\ref{tab:crossarch}'s Style-Sep. column). The rank sweep's mechanism claim remains qualified at two-seed power (Section~\ref{sec:ranksweep}, Conclusion). Length-adjustment was untested on the sweeps' architectures; single-seed perplexity does not track the crossover; models above 3B remain untested. Training and validation data share one generative process, and every metric is fully automated: no human rater has judged any output, so this closed loop confirms internal, not external, validity, and neither component has clinical validation. Reported latency excludes \textit{guard-bear}'s pass; its dataset has not been red-teamed, and paraphrase-level (as opposed to exact-text) leakage remains unchecked despite the multi-seed campaign (Section~\ref{sec:guardresults}). \textbf{Most operationally consequential:} that campaign's per-seed threshold ranges from 0.94 to 0.04 though performance does not -- a fixed threshold cannot be assumed to transfer to a retrained model, and deployment must re-tune on fresh validation data after every retrain, which may not always be available. A blocked query returns no response at all (Figure~\ref{fig:architecture}); for a distressed child, silence instead of a graceful redirect is itself an unaddressed harm. The prompted-baseline comparison (Section~\ref{sec:responsemodel}) uses one untuned system prompt per role; a different prompt could shift its readability/latency tradeoff. Bundling three contributions (safety classifier, response-model ablation, mechanism sweeps) under one page budget leaves each with less room than it would have standalone -- most visibly, guard-bear's related work is a single paragraph, and the sweeps run at two seeds rather than the response-model campaign's 25--30.
 
 \backmatter
 
 \bmhead{Supplementary information}
 
-Full validation-set outputs, dataset files, and training/evaluation scripts are available at the repositories listed under Data availability below; no separate supplementary bundle accompanies this submission.
+Validation-set outputs, dataset files, and scripts are available at the repositories under Data availability below; no separate bundle accompanies this submission.
 
 \bmhead{Acknowledgements}
 
@@ -302,7 +319,7 @@ Not applicable.
 \begin{itemize}
 \item \textbf{Funding:} No funding to disclose.
 \item \textbf{Conflict of interest/Competing interests:} The authors declare no conflicts of interest.
-\item \textbf{Ethics approval and consent to participate; consent for publication:} Not applicable; no human subjects, patient data, or clinical trial. All data are synthetic or from public reference/prompt-injection materials.
+\item \textbf{Ethics approval and consent to participate; consent for publication:} Not applicable (no human subjects, patient data, or clinical trial); all data are synthetic or public reference/prompt-injection materials. Not a certification of clinical or deployment readiness -- no clinician has reviewed any output (Limitations).
 \item \textbf{Data, materials, and code availability:} \textit{small-bear}'s code/data at \url{https://github.com/abarros6/small-bear}; \textit{guard-bear}'s code/data at \url{https://github.com/abarros6/guard-bear}.
 \item \textbf{Author contribution:} S.d.R.\ and R.E.\ supervised the research. A.B.\ ran all experiments, designed \textit{guard-bear}, and wrote the paper except the Introduction, written by K.K. All authors reviewed and approved the final manuscript.
 \end{itemize}
