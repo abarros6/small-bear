@@ -489,6 +489,83 @@ this addition (12→13 pages) and re-trimmed back to exactly 12 pages of body co
 further prose condensing (Related Work, Evaluation Framework, Discussion) — no numeric content
 was cut to make room, only redundant phrasing.
 
+### §6.6 — Follow-up — COMPLETE — Length-capped prompted baseline (the "just prompt harder" counterfactual)
+
+A repeated pessimistic-review criticism (rounds 9–11 of `paper/AISSH_Springer/REVIEW_TODO.md`)
+of the existing prompted-baseline comparison (§3.1 of the paper) was that it used a single
+untuned system prompt with no length control, so its 2.0–10.3s latency and 0–8% under-1.0s
+rate proved fine-tuning "wins on latency" against a strawman, not the best available prompted
+alternative. The paper's own Limitations already flagged this ("a different prompt could shift
+its readability/latency tradeoff") — this experiment tests it directly rather than leaving it
+as an acknowledged-but-untested gap.
+
+**Method.** Same base models (Llama 3.2 1B/3B, no fine-tuning), same age-targeted system
+prompts as the existing prompted baseline, with one clause appended: "Keep your answer under
+60 words." Generated via `src/generate_outputs.py --base --output-tag prompted_brief_{1b,3b}
+--system-prompt-5-11 ... --system-prompt-12-18 ...` (50 examples/role, same held-out set),
+evaluated via `src/evaluate.py --latency --separation`. Outputs:
+`outputs/all_prompted_brief_{1b,3b}_outputs.jsonl`; reports:
+`results/prompted_brief_{1b,3b}_eval.txt`.
+
+**Findings.**
+
+| Config | Role | FK≤7.0 | Avg Lat.(s) | <1.0s | Style-Sep. |
+|---|---|---|---|---|---|
+| Prompted-Brief-1B | 5–11 | 100% (50/50) | 0.64 | 100% | 0.870 ± 0.093 |
+| Prompted-Brief-1B | 12–18 | — | 0.75 | 90% | (same pair) |
+| Prompted-Brief-3B | 5–11 | 94% (47/50) | 1.48 | 0% | 0.940 ± 0.037 |
+| Prompted-Brief-3B | 12–18 | — | 1.59 | 0% | (same pair) |
+
+On **1B**, the length-capped prompt closes the latency gap entirely and beats every fine-tuned
+adapter on both FK≤7.0 pass rate (100% vs. Fast-1B's 82%) and average latency (0.64s vs.
+Fast-1B's 0.93s) — this is a genuine, uncomfortable result: for this one cell, prompting alone,
+given the right instruction, outperforms fine-tuning on the exact metrics the paper uses to
+argue fine-tuning's value. It costs style separation (0.870 vs. 0.900–0.960 across all four
+fine-tuned configs, closer to Base's 0.670/0.640).
+
+On **3B**, the same clause improves latency substantially (5.03–10.29s uncapped → 1.48–1.59s)
+but still fails the 1.0s target completely (0/50), because the 3B base model's per-token
+latency alone exceeds budget even at a 48–55-word response length — no amount of length
+capping fixes this on 3B hardware-bound latency. FK-pass (94%) and style separation (0.940)
+are both comparable to or better than the fine-tuned 3B configs.
+
+**Why this doesn't fully undercut the paper's claim, but does narrow it.** The clause itself
+was authored with foreknowledge of the exact evaluation thresholds (FK≤7.0, 1.0s latency) being
+tested against — a real deploying engineer choosing a length instruction without having run
+this exact experiment first would not necessarily land on "60 words" or know it matters. This
+is a best-case, threshold-aware prompt, not a demonstration that prompting is robust across
+phrasings. The paper's fine-tuning contribution is now framed accordingly: not "beats any
+prompt on any metric" (false, per this table) but "reaches the deployment target without
+requiring the deploying application to already know and hand-tune to these specific
+thresholds," plus a real, consistent style-separation edge on 1B. This is a narrower and more
+defensible claim than the pre-§6.6 framing, and it directly resolves the paper's own flagged
+gap rather than leaving it as an untested caveat.
+
+**Paper fix:** Abstract, Contributions bullet 2, Results §3.1 (new paragraph), Conclusion, and
+Limitations all updated in `paper/AISSH_Springer/aissh_final.tex`. Page budget required
+`\addtolength{\textheight}` raised from 18mm to 25mm to stay at 13 pages; no content was cut,
+only tightened.
+
+**Round-12 review walk-back (2026-08-05).** A fresh pessimistic review of the above scored it
+3/10, specifically because the "fine-tuning's most defensible remaining edge is... a real
+style-separation gap" framing leaned on the inter-role classifier as a rescue argument after
+this very paper had already conceded, two paragraphs earlier, that the same classifier "does
+not discriminate Standard from Fast" — read by the reviewer as goalpost relocation, compounded
+by treating a single-seed ($n{=}50$) result as load-bearing evidence when every other headline
+claim in the paper gets multi-seed treatment first. Separately, the reviewer forensically
+checked the seed-campaign's peeking-correction claim ("per a plan fixed before unblinding stage
+two," §3.3) against file mtimes: the batch-2 3B config generator was authored 2026-07-26 21:30,
+only ~3 hours after the last batch-1 3B adapter finished training (18:46) and the only git
+commit touching either config-gen script post-dates both batches. This does not disprove the
+statistical correction (the combination test is the right tool regardless), but "fixed before
+unblinding" overclaims what the evidence supports. Both fixed: the paper's own text now
+explicitly states the prompted-brief comparison is single-seed and unreplicated, retracts the
+style-separation-as-rescue framing, downgrades the claim to "narrower than originally framed,"
+and adds a matching hedge to the Fast-1B deployment recommendation in the Conclusion; the
+peeking-correction sentence now says the extension was "informed by the interim look rather
+than blinded to it," locating what was actually pre-specified (the combination weights) instead
+of implying the whole extension decision predated any data.
+
 ## §7 — TODO (future, not scheduled)
 
 - **Dataset quality cull (Area 4).** Score all training examples on FK grade and response

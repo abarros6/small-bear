@@ -1,0 +1,67 @@
+
+============================================================
+EVALUATION REPORT
+============================================================
+File: outputs/all_prompted_brief_3b_outputs.jsonl
+Total examples: 100
+
+----------------------------------------
+Role: age_5_11 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 4.4, min: 2.0, max: 7.9
+    SMOG          — avg: 7.3  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 6.1
+    Coleman-Liau  — avg: 5.6
+    Lexical div.  — avg: 0.843  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 48
+    FK <= 7.0 target: 47/50 pass (94.0%)
+    Worst offenders:
+      FK 7.9: 'How will I know when it's time to go home? Will someone just'
+      FK 7.4: 'After I have the operation, will I feel sick when I wake up?'
+      FK 7.3: 'The doctor said I need something called an IV. What even is '
+
+  Latency (50 samples):
+    avg: 1.48s, min: 1.23s, max: 2.13s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 60
+    Avg tokens/second:   40.4
+
+----------------------------------------
+Role: age_12_18 (50 examples)
+----------------------------------------
+
+  Reading Level:
+    FK grade      — avg: 8.3, min: 3.9, max: 13.2
+    SMOG          — avg: 11.1  (reliable only on long texts; 0 = too short)
+    Gunning Fog   — avg: 10.5
+    Coleman-Liau  — avg: 8.9
+    Lexical div.  — avg: 0.837  (TTR: 0=repetitive, 1=all unique words)
+    Avg word count: 55
+
+  Latency (50 samples):
+    avg: 1.59s, min: 1.25s, max: 2.87s
+    Under 1.0s target: 0/50
+    Avg tokens/response: 66
+    Avg tokens/second:   41.0
+
+----------------------------------------
+Category Distribution
+----------------------------------------
+  age_12_18/unknown: 50
+  age_5_11/unknown: 50
+
+============================================================
+SUMMARY
+============================================================
+  Total examples: 100
+  age_5_11 FK <= 7.0: 47/50
+
+
+----------------------------------------
+Inter-Role Style Separation (TF-IDF + LR, 5-fold CV)
+----------------------------------------
+  Examples: {'age_5_11': 50, 'age_12_18': 50}
+  Accuracy: 0.940 ± 0.037
+  ~0.50=chance  ~0.70=moderate  ~0.90+=strong separation
